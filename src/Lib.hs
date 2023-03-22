@@ -18,7 +18,7 @@ import SDL.Font
 
 
 windowSize :: (Int, Int)
-windowSize = (900, 600)
+windowSize = (1000, 700)
 
 data Intent
   = Idle
@@ -240,11 +240,21 @@ drawText r t (x, y) = do
 drawWorld :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> World -> IO ()
 drawWorld r (t, ti) w = do
   drawBoard r
-  drawText r letters (75, 10)
+  drawText r letters (70, 25)
+  drawText r letters (70, (snd windowSize) - 50)
+  printNumbers 19
 
   where
     letters :: Text
-    letters = (pack $ insertEveryN 1 6 ' ' $ takeWhile (/= (['A'..'Z'] !! (19))) ['A'..'Z'])
+    letters = (pack $ insertEveryN 1 7 ' ' $ takeWhile (/= (['A'..'Z'] !! 19)) ['A'..'Z'])
+
+    printNumbers :: Int -> IO ()
+    printNumbers n = do
+      drawText r (pack $ show n) (25, 60+(29*n))
+      if elem n [1..19]
+       then do printNumbers (n-1)
+      else pure()
+
 
 
 -- Draw an empty board
