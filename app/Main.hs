@@ -4,7 +4,6 @@ module Main (main) where
 
 import qualified Common as C
 import qualified Lib
-import Lib2
 
 main :: IO ()
 

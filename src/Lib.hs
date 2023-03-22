@@ -7,7 +7,6 @@ module Lib (
 
 import qualified SDL
 import qualified Common as C
-import Lib2
 
 import Control.Monad          (void)
 import Control.Monad.Loops    (iterateUntilM)
@@ -33,8 +32,9 @@ data World = World
   { exiting :: Bool
   , width   :: Int
   , height  :: Int
-  , panes   :: PaneMap
+  , slots   :: PaneMap
   }
+
 
 
 data PaneMap = PaneMap
@@ -64,7 +64,7 @@ initialWorld = World
   { exiting = False
   , width = 840
   , Lib.height = 480
-  , panes = initialPanes
+  , slots = initialPanes
   }
 
 
@@ -88,7 +88,7 @@ gray = SDL.V4 128 25 25 255
 mainApp :: SDL.Window -> IO ()
 mainApp w =
     C.withRenderer w $ \r -> do
-      t <- C.loadTextureWithInfo r "./assets/wood.png"
+      t <- C.loadTextureWithInfo r "./assets/background.png"
 
       -- we create an utility curry for us here
       let doRender = Lib.renderWorld r t
@@ -166,23 +166,23 @@ updatePaneMap f g BottomRight (PaneMap tl tr bl br) = PaneMap (g tl) (g tr) (g b
 
 
 pressWorld :: Quadrant -> World -> World
-pressWorld q w = w { panes = panes' }
-  where panes' = updatePaneMap setDown id q (panes w)
+pressWorld q w = w { slots = slots' }
+  where slots' = updatePaneMap setDown id q (slots w)
 
 
 releaseWorld :: Quadrant -> World -> World
-releaseWorld q w = w { panes = panes' }
-  where panes' = updatePaneMap setUp id q (panes w)
+releaseWorld q w = w { slots = slots' }
+  where slots' = updatePaneMap setUp id q (slots w)
 
 
 hoverWorld :: Quadrant -> World -> World
-hoverWorld q w = w { panes = panes' }
-  where panes' = updatePaneMap setOver setOut q (panes w)
+hoverWorld q w = w { slots = slots' }
+  where slots' = updatePaneMap setOver setOut q (slots w)
 
 
 leaveWorld :: Quadrant -> World -> World
-leaveWorld q w = w { panes = panes' }
-  where panes' = updatePaneMap setOut setOver q (panes w)
+leaveWorld q w = w { slots = slots' }
+  where slots' = updatePaneMap setOut setOver q (slots w)
 
 
 setOut :: Pane -> Pane
@@ -239,32 +239,40 @@ drawText r t (x, y) = do
 -- The actual method for drawing that is used by the rendering method above.
 drawWorld :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> World -> IO ()
 drawWorld r (t, ti) w = do
-  drawBoard r
+
+  bt <- C.loadTextureWithInfo r "./assets/wood.png"
+  drawBoard r bt
+
   drawText r letters (70, 25)
   drawText r letters (70, (snd windowSize) - 50)
-  printNumbers 19
+  printNumbers 19 25
+  printNumbers 19 $ (fst windowSize) - 50
 
   where
     letters :: Text
     letters = (pack $ insertEveryN 1 7 ' ' $ takeWhile (/= (['A'..'Z'] !! 19)) ['A'..'Z'])
 
-    printNumbers :: Int -> IO ()
-    printNumbers n = do
-      drawText r (pack $ show n) (25, 60+(29*n))
-      if elem n [1..19]
-       then do printNumbers (n-1)
+    printNumbers :: Int -> Int -> IO ()
+    printNumbers n posx = do
+      drawText r (pack $ show n) (posx, 30+(31*n))
+      if elem n [2..19]
+       then do printNumbers (n-1) posx
       else pure()
 
 
 
--- Draw an empty board
-drawBoard :: SDL.Renderer -> IO ()
-drawBoard r = do
-  SDL.drawRect r (Just $ C.mkRect margin margin w h)
+-- Draw an empty board with texture
+drawBoard :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> IO ()
+drawBoard r (t, ti) = do
+
+  SDL.copy r t board board
+
   where
     margin = fromIntegral 70
     w = fromIntegral (fst windowSize) - margin*2
     h = fromIntegral (snd windowSize) - margin*2
+    board = (Just $ C.mkRect margin margin w h)
+
 
 
 
@@ -273,9 +281,8 @@ drawBoard r = do
 drawBackground :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> (Int, Int) -> IO ()
 drawBackground r (t, ti) (winWidth, winHeight) = do
   -- Get the size of the texture, and we scale it down for a better effect
-  -- the original wood.png file is "too big"
-  let texHeight = SDL.textureHeight ti `div` 3
-  let texWidth = SDL.textureWidth ti `div` 3
+  let texHeight = SDL.textureHeight ti
+  let texWidth = SDL.textureWidth ti
 
   -- Loop and draw the tiled texture
   let loop x y
@@ -288,13 +295,13 @@ drawBackground r (t, ti) (winWidth, winHeight) = do
   loop 0 0
 
 
-
-
--- Converts Pane to the texture coordinates.
-getMask :: (Num a) => Pane -> (a, a)
-getMask Out  = (  0,   0)
-getMask Over = (320,   0)
-getMask Down = (  0, 240)
-getMask Up   = (320, 240)
+-- Inserts a given character t times for every n characters provided in the string
+insertEveryN :: Int ->  Int -> Char -> [Char] -> [Char]
+insertEveryN 0 t y xs = xs
+insertEveryN n t y [] = []
+insertEveryN n t y xs
+ | length xs < n = xs
+ | t < 1 = xs
+ | otherwise = take n xs ++ (concatMap (replicate t) [y]) ++ insertEveryN n t y (drop n xs)
 
 

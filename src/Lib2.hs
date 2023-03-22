@@ -4,7 +4,6 @@ module Lib2
     ( boardSize
     , playGame
     , displayBoard
-    , insertEveryN
     ) where
 
 
@@ -85,24 +84,8 @@ playGame board = do
   playGame newBoard
 
 
-
-
-
-
 insertAt :: a -> Int -> [a] -> [a]
 insertAt newElement _ [] = [newElement]
 insertAt newElement i (a:as)
   | i <= 0 = newElement:a:as
   | otherwise = a : insertAt newElement (i - 1) as
-
-
--- Inserts a given character t times for every n characters provided in the string
-insertEveryN :: Int ->  Int -> Char -> [Char] -> [Char]
-insertEveryN 0 t y xs = xs
-insertEveryN n t y [] = []
-insertEveryN n t y xs
- | length xs < n = xs
- | t < 1 = xs
- | otherwise = take n xs ++ (concatMap (replicate t) [y]) ++ insertEveryN n t y (drop n xs)
-
-
