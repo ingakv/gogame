@@ -17,7 +17,6 @@ import SDL.Font
 
 
 import Data.List.Split
-import Data.List
 
 
 windowSize :: (Int, Int)
@@ -38,9 +37,10 @@ data Intent
 
 data World = World
   { exiting :: Bool
-  , panes   :: SlotMap
+  , slots   :: SlotMap
   , mouseCoords   :: (Int, Int)
   , slotMap :: [[Slot]]
+  , textures :: [(SDL.Texture, SDL.TextureInfo)]
   }
 
 
@@ -82,10 +82,9 @@ initialWorld = World
   { exiting = False
   , slotMap = initBoard boardSize boardSize boardSize []
   , mouseCoords = (0,0)
---  , slots = initialSlots
-  , panes = initialSlots
+  , slots = initialSlots
+  , textures = []
   }
-
 
 
 initialSlots :: SlotMap
@@ -109,8 +108,10 @@ mainApp w =
       t2 <- C.loadTextureWithInfo r "./assets/wood.png"
       t3 <- C.loadTextureWithInfo r "./assets/white_marker.png"
       t4 <- C.loadTextureWithInfo r "./assets/black_marker.png"
+      t5 <- C.loadTextureWithInfo r "./assets/white_marker_hover.png"
+      t6 <- C.loadTextureWithInfo r "./assets/black_marker_hover.png"
 
-      let t = [t1,t2,t3,t4]
+      let t = [t1,t2,t3,t4,t5,t6]
 
       -- we create an utility curry for us here
       let doRender = Lib.renderWorld r t
@@ -277,13 +278,6 @@ drawText r t (x, y) = do
     SDL.destroyTexture surf
 
 
--- Converts Slot to the texture coordinates.
-getMask :: (Num a) => Slot -> (a, a)
-getMask Empty  = (  0,   0)
-getMask White = (320,   0)
-
-
-
 
 ------------- DRAW FUNCTIONS ----------------------
 
@@ -308,6 +302,10 @@ drawWorld r t w = do
 
   -- Prints mouse coordinates
   drawText r (pack (show $ mouseCoords w)) (0,0)
+
+
+  -- Hover marker
+  drawMarker r (t !! 4) ((fst $ mouseCoords w)-10, (snd $ mouseCoords w)-10)
 
 
 
@@ -369,7 +367,7 @@ horLine r n = do
   SDL.drawLine r (C.mkPoint x ay) (C.mkPoint x by)
     where
       x = fromIntegral $ 75 + n*35
-      ay = fromIntegral $ 50
+      ay = 50
       by = fromIntegral $ 60 + (boardSize-1)*35
 
 -- Vertical lines
@@ -377,7 +375,7 @@ verLine :: SDL.Renderer -> Int -> IO ()
 verLine r n = do
   SDL.drawLine r (C.mkPoint ax y) (C.mkPoint bx y)
     where
-      ax = fromIntegral $ 70
+      ax = 70
       bx = fromIntegral $ 80 + (boardSize-1)*35
       y = fromIntegral $ 55 + n*35
 
@@ -389,11 +387,11 @@ drawBoard :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> IO ()
 drawBoard r (t, ti) = do
   SDL.copy r t boardTexture board
   where
-    marginx = fromIntegral 70
-    marginy = fromIntegral 50
-    size = fromIntegral (boardSize-1)*35 + 11
+    marginx = 70
+    marginy = 50
+    s = fromIntegral (boardSize-1)*35 + 11
     boardTexture = (Just $ C.mkRect 0 0 (SDL.textureWidth ti) (SDL.textureHeight ti))
-    board = (Just $ C.mkRect marginx marginy size size)
+    board = (Just $ C.mkRect marginx marginy s s)
 
 
 
@@ -434,8 +432,8 @@ drawBackground r (t, ti) (winWidth, winHeight) = do
 
 -- Inserts a given character t times for every n characters provided in the string
 insertEveryN :: Int ->  Int -> Char -> [Char] -> [Char]
-insertEveryN 0 t y xs = xs
-insertEveryN n t y [] = []
+insertEveryN 0 _ _ xs = xs
+insertEveryN _ _ _ [] = []
 insertEveryN n t y xs
  | length xs < n = xs
  | t < 1 = xs

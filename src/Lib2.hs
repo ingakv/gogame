@@ -12,11 +12,6 @@ import Data.List.Split
 import Data.Char
 
 
-
-boardSize :: Int -> [[String]]
-boardSize size =
-  createBoard size size size []
-
 -- Makes the board printable
 formatBoard :: [[String]] -> String
 formatBoard board = unlines $ map(\\"\t|") $ map (concatMap ("\t|   "++)) board
