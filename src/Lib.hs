@@ -69,7 +69,8 @@ data PaneMap = PaneMap
   , bottomRight :: Slot
   }
 
-
+markerPos :: Int -> Int -> (Int, Int)
+markerPos x y = (65 + 35*x, 45 + 35*y)
 
 data Quadrant
   = TopLeft
@@ -244,7 +245,7 @@ renderWorld :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO (
 renderWorld r t w = do
   SDL.clear r
   drawBackground r (t !! 0) windowSize
-  drawWorld r (t !! 1) w
+  drawWorld r t w
   SDL.present r
 
 
@@ -263,10 +264,10 @@ drawText r t (x, y) = do
 
 
 -- The actual method for drawing that is used by the rendering method above.
-drawWorld :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> World -> IO ()
-drawWorld r (t, ti) w = do
+drawWorld :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
+drawWorld r t w = do
 
-  drawBoard r (t, ti)
+  drawBoard r (t !! 1)
 
   drawLines' 0
 
@@ -279,7 +280,7 @@ drawWorld r (t, ti) w = do
 
   where
     letters :: Text
-    letters = (pack $ insertEveryN 12 1 ' ' $ insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! boardSize)) ['A'..'Z'])
+    letters = (pack $ insertEveryN 11 1 ' ' $ insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! boardSize)) ['A'..'Z'])
 
     printNumbers :: Int -> Int -> IO ()
     printNumbers n posx = do
@@ -307,8 +308,8 @@ drawWorld r (t, ti) w = do
     -- Checks if a slot is empty, and draws a marker in that spot if it isn't
     checkBoard :: Int -> Int -> IO ()
     checkBoard x y = do
-      if not (isEmpty ((slotMap w !! x) !! y))
-        then do drawMarker r (t, ti) (67 + 47*x, 60 + 31*y)
+      if (isEmpty ((slotMap w !! x) !! y))
+        then do drawMarker r (t !! 2) (markerPos x y)
       else pure()
 
       if x < (boardSize-1)
@@ -318,6 +319,7 @@ drawWorld r (t, ti) w = do
         then do
           checkBoard 0 (y+1)
         else pure()
+
 
 
 -- Draws a line between two points that are computed based on the number n:
@@ -363,7 +365,7 @@ drawMarker r (t, ti) (px, py) = do
   where
     posx = fromIntegral px
     posy = fromIntegral py
-    d = 25
+    d = 20
     markerTexture = (Just $ C.mkRect 0 0 (SDL.textureWidth ti) (SDL.textureHeight ti))
     marker = (Just $ C.mkRect posx posy d d)
 
