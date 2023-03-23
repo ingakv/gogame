@@ -13,6 +13,5 @@ main = C.withSDL $ C.withSDLImage $ do
 
 
   -- Making the board --
-  --let board = boardSize 9
 
   --playGame board

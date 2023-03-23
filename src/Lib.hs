@@ -21,7 +21,7 @@ import Data.List
 
 
 windowSize :: (Int, Int)
-windowSize = (1000, 700)
+windowSize = (1000, 750)
 
 boardSize :: Int
 boardSize = 19
@@ -86,13 +86,14 @@ initialWorld = World
   }
 
 
+
 initialPanes :: PaneMap
 initialPanes = PaneMap
   { topLeft     = Empty
   }
 
-gray :: SDL.Font.Color
-gray = SDL.V4 128 25 25 255
+textColor :: SDL.Font.Color
+textColor = SDL.V4 128 25 25 255
 
 
 
@@ -103,10 +104,16 @@ gray = SDL.V4 128 25 25 255
 mainApp :: SDL.Window -> IO ()
 mainApp w =
     C.withRenderer w $ \r -> do
-      t <- C.loadTextureWithInfo r "./assets/background.png"
+
+      t1 <- C.loadTextureWithInfo r "./assets/background.png"
+      t2 <- C.loadTextureWithInfo r "./assets/wood.png"
+      t3 <- C.loadTextureWithInfo r "./assets/white_marker.png"
+
+      let t = [t1,t2,t3]
 
       -- we create an utility curry for us here
       let doRender = Lib.renderWorld r t
+
 
       void $ iterateUntilM
         Lib.exiting
@@ -115,8 +122,10 @@ mainApp w =
         )
         Lib.initialWorld
 
-      -- when we are done with the renderer, we need to clean Empty
-      SDL.destroyTexture (fst t)
+      -- when we are done with the renderer, we need to clean up
+      SDL.destroyTexture (fst t1)
+      SDL.destroyTexture (fst t2)
+      SDL.destroyTexture (fst t3)
 
 
 -- Given a list of events, update the world
@@ -231,19 +240,19 @@ quitWorld w = w { exiting = True }
 -- we can render the world. Note that the rendering results in an IO action.
 -- This is a wrapper method that clears the rendering target, draws in the window,
 -- and swaps the contexts. The actual drawing is done in drawWorld below.
-renderWorld :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> World -> IO ()
+renderWorld :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
 renderWorld r t w = do
   SDL.clear r
-  drawBackground r t windowSize
-  drawWorld r t w
+  drawBackground r (t !! 0) windowSize
+  drawWorld r (t !! 1) w
   SDL.present r
 
 
 -- Draw text
 drawText :: SDL.Renderer -> Text -> (Int, Int) -> IO ()
 drawText r t (x, y) = do
-    font <- SDL.Font.load "./ttf/roboto/Roboto-Regular.ttf" 20
-    textSurf <- SDL.Font.solid font gray t
+    font <- SDL.Font.load "./ttf/roboto/Roboto-Regular.ttf" 14
+    textSurf <- SDL.Font.solid font textColor t
     surf <- SDL.createTextureFromSurface r textSurf
     info <- SDL.queryTexture surf
     let w = SDL.textureWidth info
@@ -257,35 +266,49 @@ drawText r t (x, y) = do
 drawWorld :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> World -> IO ()
 drawWorld r (t, ti) w = do
 
-  bt <- C.loadTextureWithInfo r "./assets/wood.png"
-  drawBoard r bt
+  drawBoard r (t, ti)
 
-
-  mt <- C.loadTextureWithInfo r "./assets/white_marker.png"
+  drawLines' 0
 
   checkBoard 0 0
 
-  drawText r letters (70, 25)
+  drawText r letters (70, 15)
   drawText r letters (70, (snd windowSize) - 50)
   printNumbers boardSize 25
-  printNumbers boardSize $ (fst windowSize) - 50
+  printNumbers boardSize $ 730
 
   where
     letters :: Text
-    letters = (pack $ insertEveryN 1 7 ' ' $ takeWhile (/= (['A'..'Z'] !! boardSize)) ['A'..'Z'])
+    letters = (pack $ insertEveryN 12 1 ' ' $ insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! boardSize)) ['A'..'Z'])
 
     printNumbers :: Int -> Int -> IO ()
     printNumbers n posx = do
-      drawText r (pack $ show n) (posx, 30+(31*n))
+      drawText r (pack $ show n) (posx, 10+(35*n))
       if elem n [2..boardSize]
        then do printNumbers (n-1) posx
       else pure()
 
+
+  -- Draw the lines where the markers are to be placed along
+    drawLines' :: Int -> IO ()
+    drawLines' n = do
+      horLine r n
+      if elem n [0..boardSize-2]
+       then do  drawLines' (n+1)
+      else drawVerLines 0
+
+    drawVerLines :: Int -> IO ()
+    drawVerLines n = do
+      verLine r n
+      if elem n [0..boardSize-2]
+       then do  drawVerLines (n+1)
+      else pure()
+
+    -- Checks if a slot is empty, and draws a marker in that spot if it isn't
     checkBoard :: Int -> Int -> IO ()
     checkBoard x y = do
-      mt <- C.loadTextureWithInfo r "./assets/white_marker.png"
-      if isEmpty ((slotMap w !! x) !! y)
-        then do drawMarker r mt (67 + 47*x, 60 + 31*y)
+      if not (isEmpty ((slotMap w !! x) !! y))
+        then do drawMarker r (t, ti) (67 + 47*x, 60 + 31*y)
       else pure()
 
       if x < (boardSize-1)
@@ -297,6 +320,25 @@ drawWorld r (t, ti) w = do
         else pure()
 
 
+-- Draws a line between two points that are computed based on the number n:
+
+-- Horisontal lines
+horLine :: SDL.Renderer -> Int -> IO ()
+horLine r n = do
+  SDL.drawLine r (C.mkPoint x ay) (C.mkPoint x by)
+    where
+      x = fromIntegral $ 75 + n*35
+      ay = fromIntegral $ 50
+      by = fromIntegral $ 60 + (boardSize-1)*35
+
+-- Vertical lines
+verLine :: SDL.Renderer -> Int -> IO ()
+verLine r n = do
+  SDL.drawLine r (C.mkPoint ax y) (C.mkPoint bx y)
+    where
+      ax = fromIntegral $ 70
+      bx = fromIntegral $ 80 + (boardSize-1)*35
+      y = fromIntegral $ 55 + n*35
 
 
 
@@ -306,12 +348,11 @@ drawBoard :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> IO ()
 drawBoard r (t, ti) = do
   SDL.copy r t boardTexture board
   where
-    margin = fromIntegral 70
-    w = fromIntegral (fst windowSize) - margin*2
-    h = fromIntegral (snd windowSize) - margin*2
+    marginx = fromIntegral 70
+    marginy = fromIntegral 50
+    size = fromIntegral (boardSize-1)*35 + 11
     boardTexture = (Just $ C.mkRect 0 0 (SDL.textureWidth ti) (SDL.textureHeight ti))
-    board = (Just $ C.mkRect margin margin w h)
-
+    board = (Just $ C.mkRect marginx marginy size size)
 
 
 
@@ -366,3 +407,4 @@ insertAt newElement _ [] = [newElement]
 insertAt newElement i (a:as)
   | i <= 0 = newElement:a:as
   | otherwise = a : insertAt newElement (i - 1) as
+
