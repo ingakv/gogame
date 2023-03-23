@@ -28,16 +28,18 @@ boardSize = 19
 
 data Intent
   = Idle
+  | MouseMoved (Int, Int)
   | Quit
-  | Press Quadrant
-  | Release Quadrant
-  | Hover Quadrant
-  | Leave Quadrant
+  | Press Slot
+  | Release Slot
+  | Hover Slot
+  | Leave Slot
 
 
 data World = World
   { exiting :: Bool
-  , slots   :: PaneMap
+  , panes   :: SlotMap
+  , mouseCoords   :: (Int, Int)
   , slotMap :: [[Slot]]
   }
 
@@ -48,7 +50,7 @@ initBoard x y size li = do
   let finalList = chunksOf size li
   if x > 0
   then do
-      initBoard (x-1) y size (insertAt Empty 0 li)
+      initBoard (x-1) y size (insertAt Black 0 li)
   else if y > 1
     then do
       initBoard size (y-1) size li
@@ -62,36 +64,33 @@ data Slot
   | Black
 
 
-data PaneMap = PaneMap
-  { topLeft     :: Slot
-  , topRight    :: Slot
-  , bottomLeft  :: Slot
-  , bottomRight :: Slot
+
+
+data SlotMap = SlotMap
+  { topLeft    :: Slot
   }
+
+
 
 markerPos :: Int -> Int -> (Int, Int)
 markerPos x y = (65 + 35*x, 45 + 35*y)
 
-data Quadrant
-  = TopLeft
-  | TopRight
-  | BottomLeft
-  | BottomRight
 
 
 initialWorld :: World
 initialWorld = World
   { exiting = False
   , slotMap = initBoard boardSize boardSize boardSize []
-  , slots = initialPanes
+  , mouseCoords = (0,0)
+--  , slots = initialSlots
+  , panes = initialSlots
   }
 
 
 
-initialPanes :: PaneMap
-initialPanes = PaneMap
-  { topLeft     = Empty
-  }
+initialSlots :: SlotMap
+initialSlots = SlotMap
+  { topLeft    = Empty }
 
 textColor :: SDL.Font.Color
 textColor = SDL.V4 128 25 25 255
@@ -109,8 +108,9 @@ mainApp w =
       t1 <- C.loadTextureWithInfo r "./assets/background.png"
       t2 <- C.loadTextureWithInfo r "./assets/wood.png"
       t3 <- C.loadTextureWithInfo r "./assets/white_marker.png"
+      t4 <- C.loadTextureWithInfo r "./assets/black_marker.png"
 
-      let t = [t1,t2,t3]
+      let t = [t1,t2,t3,t4]
 
       -- we create an utility curry for us here
       let doRender = Lib.renderWorld r t
@@ -127,6 +127,7 @@ mainApp w =
       SDL.destroyTexture (fst t1)
       SDL.destroyTexture (fst t2)
       SDL.destroyTexture (fst t3)
+      SDL.destroyTexture (fst t4)
 
 
 -- Given a list of events, update the world
@@ -141,70 +142,71 @@ payloadToIntent SDL.QuitEvent            = Quit -- window CLOSE pressed
 payloadToIntent (SDL.KeyboardEvent e)    = -- When Q is pressed, quit also
   if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeQ then Quit else Idle
 payloadToIntent (SDL.MouseMotionEvent e) = motionIntent e
-payloadToIntent (SDL.MouseButtonEvent e) = buttonIntent e
+--payloadToIntent (SDL.MouseButtonEvent e) = buttonIntent e
 payloadToIntent _                        = Idle
+
+
 
 -- Convert mouse motion event to Intent
 motionIntent :: SDL.MouseMotionEventData -> Intent
-motionIntent e = Hover q
+motionIntent e = (MouseMoved (fromIntegral x, fromIntegral y))
   where
-    q = selectQuadrant x y
+    q = selectTopLeft x y
     -- observe clever use of pattern matching to get x and y from the event!
     (SDL.P (SDL.V2 x y)) = SDL.mouseMotionEventPos e
 
 
-  -- | SDL.mouseButtonEventMotion e == SDL.Pressed -> Empty
-  --
 buttonIntent :: SDL.MouseButtonEventData -> Intent
 buttonIntent e = t q
   where
-    q = selectQuadrant x y
+    q = selectTopLeft x y
     (SDL.P (SDL.V2 x y)) = SDL.mouseButtonEventPos e
     t = if SDL.mouseButtonEventMotion e == SDL.Pressed
            then Press
            else Release
 
 
-selectQuadrant :: (Num a, Ord a) => a -> a -> Quadrant
-selectQuadrant x y
-  | x <  320 && y <  240 = TopLeft
-  | x >= 320 && y <  240 = TopRight
-  | x <  320 && y >= 240 = BottomLeft
-  | x >= 320 && y >= 240 = BottomRight
+selectTopLeft :: (Num a, Ord a) => a -> a -> Slot
+selectTopLeft x y
+  | x >= 3200 && y <  2400 = Empty
   | otherwise            = undefined
 
-
 applyIntent :: Intent -> World -> World
-applyIntent (Press q)   = pressWorld q
-applyIntent (Release q) = releaseWorld q
-applyIntent (Hover q)   = hoverWorld q
-applyIntent (Leave q)   = leaveWorld q
+--applyIntent (Press q)   = pressWorld q
+--applyIntent (Release q) = releaseWorld q
+--applyIntent (Hover q)   = hoverWorld q
+--applyIntent (Leave q)   = leaveWorld q
+applyIntent (MouseMoved coords)  = hoverWorld coords
 applyIntent Idle        = idleWorld
 applyIntent Quit        = quitWorld
 
+updateSlotMap :: (Slot -> Slot) -> Slot -> SlotMap -> SlotMap
+updateSlotMap f _    (SlotMap tr) = SlotMap (f tr)
 
-updatePaneMap :: (Slot -> Slot) -> (Slot -> Slot) -> Quadrant -> PaneMap -> PaneMap
-updatePaneMap f g TopLeft     (PaneMap tl tr bl br) = PaneMap (f tl) (g tr) (g bl) (g br)
-
-
-pressWorld :: Quadrant -> World -> World
+{-
+pressWorld :: Slot -> World -> World
 pressWorld q w = w { slots = slots' }
-  where slots' = updatePaneMap setDown id q (slots w)
+  where slots' = updateSlotMap setDown id q (slots w)
 
 
-releaseWorld :: Quadrant -> World -> World
+releaseWorld :: Slot -> World -> World
 releaseWorld q w = w { slots = slots' }
-  where slots' = updatePaneMap setUp id q (slots w)
+  where slots' = updateSlotMap setUp id q (slots w)
 
-
-hoverWorld :: Quadrant -> World -> World
-hoverWorld q w = w { slots = slots' }
-  where slots' = updatePaneMap setOver setOut q (slots w)
-
-
-leaveWorld :: Quadrant -> World -> World
+leaveWorld :: Slot -> World -> World
 leaveWorld q w = w { slots = slots' }
-  where slots' = updatePaneMap setOut setOver q (slots w)
+  where slots' = updateSlotMap setOut setOver q (slots w)
+
+
+-}
+
+hoverWorld :: (Int, Int) -> World -> World
+hoverWorld coords w = w { mouseCoords = coords }
+
+
+
+
+
 
 
 -- Checks whether a given slot is empty or not (occupied by a marker)
@@ -212,20 +214,32 @@ isEmpty :: Slot -> Bool
 isEmpty Empty = True
 isEmpty _ = False
 
+isWhite :: Slot -> Bool
+isWhite White = True
+isWhite _ = False
 
+isBlack :: Slot -> Bool
+isBlack Black = True
+isBlack _ = False
+
+
+setEmpty :: Slot -> Slot
+setEmpty _ = Empty
 setOut :: Slot -> Slot
 setOut _ = Empty
-
-setOver :: Slot -> Slot
-setOver _ = Empty
-
 
 setDown :: Slot -> Slot
 setDown _ = Empty
 
-
 setUp :: Slot -> Slot
 setUp _ = Empty
+
+
+setOver :: Slot -> Slot
+setOver _ = White
+
+
+
 
 
 idleWorld :: World -> World
@@ -263,9 +277,21 @@ drawText r t (x, y) = do
     SDL.destroyTexture surf
 
 
+-- Converts Slot to the texture coordinates.
+getMask :: (Num a) => Slot -> (a, a)
+getMask Empty  = (  0,   0)
+getMask White = (320,   0)
+
+
+
+
+------------- DRAW FUNCTIONS ----------------------
+
+
 -- The actual method for drawing that is used by the rendering method above.
 drawWorld :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
 drawWorld r t w = do
+
 
   drawBoard r (t !! 1)
 
@@ -278,7 +304,16 @@ drawWorld r t w = do
   printNumbers boardSize 25
   printNumbers boardSize $ 730
 
+
+
+  -- Prints mouse coordinates
+  drawText r (pack (show $ mouseCoords w)) (0,0)
+
+
+
+
   where
+
     letters :: Text
     letters = (pack $ insertEveryN 11 1 ' ' $ insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! boardSize)) ['A'..'Z'])
 
@@ -308,8 +343,10 @@ drawWorld r t w = do
     -- Checks if a slot is empty, and draws a marker in that spot if it isn't
     checkBoard :: Int -> Int -> IO ()
     checkBoard x y = do
-      if (isEmpty ((slotMap w !! x) !! y))
+      if (isWhite ((slotMap w !! x) !! y))
         then do drawMarker r (t !! 2) (markerPos x y)
+      else if (isBlack ((slotMap w !! x) !! y))
+        then do drawMarker r (t !! 3) (markerPos x y)
       else pure()
 
       if x < (boardSize-1)
@@ -319,6 +356,8 @@ drawWorld r t w = do
         then do
           checkBoard 0 (y+1)
         else pure()
+
+
 
 
 
@@ -391,7 +430,7 @@ drawBackground r (t, ti) (winWidth, winHeight) = do
 
 
 
--- A few useful functions:
+------------------ A few small useful functions -----------------------------
 
 -- Inserts a given character t times for every n characters provided in the string
 insertEveryN :: Int ->  Int -> Char -> [Char] -> [Char]
