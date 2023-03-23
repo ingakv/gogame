@@ -16,8 +16,15 @@ import Data.Text (Text, pack)
 import SDL.Font
 
 
+import Data.List.Split
+import Data.List
+
+
 windowSize :: (Int, Int)
 windowSize = (1000, 700)
+
+boardSize :: Int
+boardSize = 19
 
 data Intent
   = Idle
@@ -30,26 +37,38 @@ data Intent
 
 data World = World
   { exiting :: Bool
-  , width   :: Int
-  , height  :: Int
   , slots   :: PaneMap
+  , slotMap :: [[Slot]]
   }
 
+
+-- Create an empty board based on a given size
+initBoard :: Int -> Int -> Int -> [Slot] -> [[Slot]]
+initBoard x y size li = do
+  let finalList = chunksOf size li
+  if x > 0
+  then do
+      initBoard (x-1) y size (insertAt Empty 0 li)
+  else if y > 1
+    then do
+      initBoard size (y-1) size li
+    else
+      finalList
+
+
+data Slot
+  = Empty
+  | White
+  | Black
 
 
 data PaneMap = PaneMap
-  { topLeft     :: Pane
-  , topRight    :: Pane
-  , bottomLeft  :: Pane
-  , bottomRight :: Pane
+  { topLeft     :: Slot
+  , topRight    :: Slot
+  , bottomLeft  :: Slot
+  , bottomRight :: Slot
   }
 
-
-data Pane
-  = Out
-  | Over
-  | Down
-  | Up
 
 
 data Quadrant
@@ -62,18 +81,14 @@ data Quadrant
 initialWorld :: World
 initialWorld = World
   { exiting = False
-  , width = 840
-  , Lib.height = 480
+  , slotMap = initBoard boardSize boardSize boardSize []
   , slots = initialPanes
   }
 
 
 initialPanes :: PaneMap
 initialPanes = PaneMap
-  { topLeft     = Out
-  , topRight    = Out
-  , bottomLeft  = Out
-  , bottomRight = Out
+  { topLeft     = Empty
   }
 
 gray :: SDL.Font.Color
@@ -83,7 +98,7 @@ gray = SDL.V4 128 25 25 255
 
 
 -- Main entry to our application logic. It takes the handle to the SDL Window,
--- sets everything up and executes the main application loop: handle user inputs,
+-- sets everything Empty and executes the main application loop: handle user inputs,
 -- and draw the world.
 mainApp :: SDL.Window -> IO ()
 mainApp w =
@@ -100,7 +115,7 @@ mainApp w =
         )
         Lib.initialWorld
 
-      -- when we are done with the renderer, we need to clean up
+      -- when we are done with the renderer, we need to clean Empty
       SDL.destroyTexture (fst t)
 
 
@@ -128,7 +143,7 @@ motionIntent e = Hover q
     (SDL.P (SDL.V2 x y)) = SDL.mouseMotionEventPos e
 
 
-  -- | SDL.mouseButtonEventMotion e == SDL.Pressed -> Down
+  -- | SDL.mouseButtonEventMotion e == SDL.Pressed -> Empty
   --
 buttonIntent :: SDL.MouseButtonEventData -> Intent
 buttonIntent e = t q
@@ -158,11 +173,8 @@ applyIntent Idle        = idleWorld
 applyIntent Quit        = quitWorld
 
 
-updatePaneMap :: (Pane -> Pane) -> (Pane -> Pane) -> Quadrant -> PaneMap -> PaneMap
+updatePaneMap :: (Slot -> Slot) -> (Slot -> Slot) -> Quadrant -> PaneMap -> PaneMap
 updatePaneMap f g TopLeft     (PaneMap tl tr bl br) = PaneMap (f tl) (g tr) (g bl) (g br)
-updatePaneMap f g TopRight    (PaneMap tl tr bl br) = PaneMap (g tl) (f tr) (g bl) (g br)
-updatePaneMap f g BottomLeft  (PaneMap tl tr bl br) = PaneMap (g tl) (g tr) (f bl) (g br)
-updatePaneMap f g BottomRight (PaneMap tl tr bl br) = PaneMap (g tl) (g tr) (g bl) (f br)
 
 
 pressWorld :: Quadrant -> World -> World
@@ -185,22 +197,25 @@ leaveWorld q w = w { slots = slots' }
   where slots' = updatePaneMap setOut setOver q (slots w)
 
 
-setOut :: Pane -> Pane
-setOut _ = Out
+-- Checks whether a given slot is empty or not (occupied by a marker)
+isEmpty :: Slot -> Bool
+isEmpty Empty = True
+isEmpty _ = False
 
 
-setOver :: Pane -> Pane
-setOver Down = Down
-setOver Up = Up
-setOver _ = Over
+setOut :: Slot -> Slot
+setOut _ = Empty
+
+setOver :: Slot -> Slot
+setOver _ = Empty
 
 
-setDown :: Pane -> Pane
-setDown _ = Down
+setDown :: Slot -> Slot
+setDown _ = Empty
 
 
-setUp :: Pane -> Pane
-setUp _ = Up
+setUp :: Slot -> Slot
+setUp _ = Empty
 
 
 idleWorld :: World -> World
@@ -209,6 +224,8 @@ idleWorld = id
 
 quitWorld :: World -> World
 quitWorld w = w { exiting = True }
+
+
 
 -- Given the renderer, and the texture and the state of the World,
 -- we can render the world. Note that the rendering results in an IO action.
@@ -243,36 +260,71 @@ drawWorld r (t, ti) w = do
   bt <- C.loadTextureWithInfo r "./assets/wood.png"
   drawBoard r bt
 
+
+  mt <- C.loadTextureWithInfo r "./assets/white_marker.png"
+
+  checkBoard 0 0
+
   drawText r letters (70, 25)
   drawText r letters (70, (snd windowSize) - 50)
-  printNumbers 19 25
-  printNumbers 19 $ (fst windowSize) - 50
+  printNumbers boardSize 25
+  printNumbers boardSize $ (fst windowSize) - 50
 
   where
     letters :: Text
-    letters = (pack $ insertEveryN 1 7 ' ' $ takeWhile (/= (['A'..'Z'] !! 19)) ['A'..'Z'])
+    letters = (pack $ insertEveryN 1 7 ' ' $ takeWhile (/= (['A'..'Z'] !! boardSize)) ['A'..'Z'])
 
     printNumbers :: Int -> Int -> IO ()
     printNumbers n posx = do
       drawText r (pack $ show n) (posx, 30+(31*n))
-      if elem n [2..19]
+      if elem n [2..boardSize]
        then do printNumbers (n-1) posx
       else pure()
+
+    checkBoard :: Int -> Int -> IO ()
+    checkBoard x y = do
+      mt <- C.loadTextureWithInfo r "./assets/white_marker.png"
+      if isEmpty ((slotMap w !! x) !! y)
+        then do drawMarker r mt (67 + 47*x, 60 + 31*y)
+      else pure()
+
+      if x < (boardSize-1)
+      then do
+          checkBoard (x+1) y
+      else if y < (boardSize-1)
+        then do
+          checkBoard 0 (y+1)
+        else pure()
+
+
+
 
 
 
 -- Draw an empty board with texture
 drawBoard :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> IO ()
 drawBoard r (t, ti) = do
-
-  SDL.copy r t board board
-
+  SDL.copy r t boardTexture board
   where
     margin = fromIntegral 70
     w = fromIntegral (fst windowSize) - margin*2
     h = fromIntegral (snd windowSize) - margin*2
+    boardTexture = (Just $ C.mkRect 0 0 (SDL.textureWidth ti) (SDL.textureHeight ti))
     board = (Just $ C.mkRect margin margin w h)
 
+
+
+
+-- Draw a singular marker with texture
+drawMarker :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> (Int, Int) -> IO ()
+drawMarker r (t, ti) (px, py) = do
+  SDL.copy r t markerTexture marker
+  where
+    posx = fromIntegral px
+    posy = fromIntegral py
+    d = 25
+    markerTexture = (Just $ C.mkRect 0 0 (SDL.textureWidth ti) (SDL.textureHeight ti))
+    marker = (Just $ C.mkRect posx posy d d)
 
 
 
@@ -280,7 +332,7 @@ drawBoard r (t, ti) = do
 -- The actual method for drawing that is used by the rendering method above.
 drawBackground :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> (Int, Int) -> IO ()
 drawBackground r (t, ti) (winWidth, winHeight) = do
-  -- Get the size of the texture, and we scale it down for a better effect
+  -- Get the size of the texture, and we scale it Empty for a better effect
   let texHeight = SDL.textureHeight ti
   let texWidth = SDL.textureWidth ti
 
@@ -295,6 +347,9 @@ drawBackground r (t, ti) (winWidth, winHeight) = do
   loop 0 0
 
 
+
+-- A few useful functions:
+
 -- Inserts a given character t times for every n characters provided in the string
 insertEveryN :: Int ->  Int -> Char -> [Char] -> [Char]
 insertEveryN 0 t y xs = xs
@@ -305,3 +360,9 @@ insertEveryN n t y xs
  | otherwise = take n xs ++ (concatMap (replicate t) [y]) ++ insertEveryN n t y (drop n xs)
 
 
+
+insertAt :: a -> Int -> [a] -> [a]
+insertAt newElement _ [] = [newElement]
+insertAt newElement i (a:as)
+  | i <= 0 = newElement:a:as
+  | otherwise = a : insertAt newElement (i - 1) as

@@ -12,19 +12,6 @@ import Data.List.Split
 import Data.Char
 
 
--- Create the board based on a given size
-createBoard :: Int -> Int -> Int -> [String] -> [[String]]
-createBoard x y size li = do
-  let finalList = chunksOf size li
-  if x > 0
-  then do
-      createBoard (x-1) y size (insert ("-") li)
-  else if y > 1
-    then do
-      createBoard size (y-1) size li
-    else
-      finalList
-
 
 boardSize :: Int -> [[String]]
 boardSize size =
@@ -84,8 +71,3 @@ playGame board = do
   playGame newBoard
 
 
-insertAt :: a -> Int -> [a] -> [a]
-insertAt newElement _ [] = [newElement]
-insertAt newElement i (a:as)
-  | i <= 0 = newElement:a:as
-  | otherwise = a : insertAt newElement (i - 1) as
