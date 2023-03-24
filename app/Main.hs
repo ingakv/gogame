@@ -3,13 +3,14 @@
 module Main (main) where
 
 import qualified Common as C
-import qualified Lib
+import Lib
+import Draw
 
 main :: IO ()
 
 main = C.withSDL $ C.withSDLImage $ do
   C.setHintQuality
-  C.withWindow "Assignment 1 - Go" Lib.windowSize $ Lib.mainApp
+  C.withWindow "Assignment 1 - Go" windowSize $ mainApp
 
 
   -- Making the board --

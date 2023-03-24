@@ -48,10 +48,6 @@ displayBoard board = do
 fromJust :: Maybe Int -> Int
 fromJust (Just x) = x
 
-placeMarker :: Char -> Int -> [[String]] -> [[String]]
-placeMarker column row board
-  | isDigit column = board
-  | otherwise = insertAt (insertAt ("X") (fromJust(elemIndex (toUpper column) ['A'..'Z'])) (delete ((board !! (fromJust(elemIndex (toUpper column) ['A'..'Z'])-1)) !! (row-1)) (board !! (row-1)))) (row-1) (delete (board !! (row-1)) ((board)))
 
 
 playGame :: [[String]] -> IO ()

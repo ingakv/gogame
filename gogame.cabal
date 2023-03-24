@@ -26,6 +26,8 @@ library
   exposed-modules:
       Lib
     , Common
+    , Draw
+    , Datatypes
   other-modules:
       Paths_gogame
   hs-source-dirs:
