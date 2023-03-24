@@ -57,7 +57,7 @@ initBoard x y size li = do
   let finalList = chunksOf size li
   if x > 0
   then do
-      initBoard (x-1) y size (insertAt Black 0 li)
+      initBoard (x-1) y size (insertAt Empty 0 li)
   else if y > 1
     then do
       initBoard size (y-1) size li
@@ -85,14 +85,14 @@ markerPos x y = (65 + 35*x, 45 + 35*y)
 
 
 -- An array of all marker positions
-allMarkerPos :: Int -> Int -> [(Int, Int)] -> [(Int, Int)]
-allMarkerPos x y li = do
-  if x > 0
+allMarkerPos :: Int -> Int -> Int -> [(Int, Int)] -> [(Int, Int)]
+allMarkerPos x y size li = do
+  if x >= 0
   then do
-      allMarkerPos (x-1) y (insertAt (markerPos x y) 0 li)
-  else if y > 1
+      allMarkerPos (x-1) y size (insertAt (markerPos x y) 0 li)
+  else if y > 0
     then do
-      allMarkerPos boardSize (y-1) li
+      allMarkerPos size (y-1) size li
     else
       li
 
@@ -107,7 +107,7 @@ initialWorld = World
   , mouseCoords = (0,0)
   , slots = initialSlots
   , textures = []
-  , mPos = allMarkerPos boardSize boardSize []
+  , mPos = allMarkerPos (boardSize-1)  (boardSize-1) (boardSize-1) []
   }
 
 
