@@ -17,6 +17,7 @@ import SDL.Font
 
 
 import Data.List.Split
+import Data.List        (intersect)
 
 
 windowSize :: (Int, Int)
@@ -24,6 +25,11 @@ windowSize = (1000, 750)
 
 boardSize :: Int
 boardSize = 19
+
+textColor :: SDL.Font.Color
+textColor = SDL.V4 150 0 0 255
+
+
 
 data Intent
   = Idle
@@ -41,6 +47,7 @@ data World = World
   , mouseCoords   :: (Int, Int)
   , slotMap :: [[Slot]]
   , textures :: [(SDL.Texture, SDL.TextureInfo)]
+  , mPos :: [(Int, Int)]
   }
 
 
@@ -77,6 +84,22 @@ markerPos x y = (65 + 35*x, 45 + 35*y)
 
 
 
+-- An array of all marker positions
+allMarkerPos :: Int -> Int -> [(Int, Int)] -> [(Int, Int)]
+allMarkerPos x y li = do
+  if x > 0
+  then do
+      allMarkerPos (x-1) y (insertAt (markerPos x y) 0 li)
+  else if y > 1
+    then do
+      allMarkerPos boardSize (y-1) li
+    else
+      li
+
+
+
+
+
 initialWorld :: World
 initialWorld = World
   { exiting = False
@@ -84,6 +107,7 @@ initialWorld = World
   , mouseCoords = (0,0)
   , slots = initialSlots
   , textures = []
+  , mPos = allMarkerPos boardSize boardSize []
   }
 
 
@@ -91,8 +115,9 @@ initialSlots :: SlotMap
 initialSlots = SlotMap
   { topLeft    = Empty }
 
-textColor :: SDL.Font.Color
-textColor = SDL.V4 128 25 25 255
+
+
+
 
 
 
@@ -112,6 +137,7 @@ mainApp w =
       t6 <- C.loadTextureWithInfo r "./assets/black_marker_hover.png"
 
       let t = [t1,t2,t3,t4,t5,t6]
+
 
       -- we create an utility curry for us here
       let doRender = Lib.renderWorld r t
@@ -305,12 +331,36 @@ drawWorld r t w = do
 
 
   -- Hover marker
-  drawMarker r (t !! 4) ((fst $ mouseCoords w)-10, (snd $ mouseCoords w)-10)
-
+  checkMouse
 
 
 
   where
+
+    checkMouse :: IO ()
+    checkMouse = do
+      let a = fst $ mouseCoords w
+      let b = snd $ mouseCoords w
+
+      let lix = [(a-20) .. (a)]
+      let liy = [(b-20) .. (b)]
+
+      let coordCombo = [ (x,y) | x <- lix, y <- liy ]
+
+
+      drawText r (pack (show $ (coordCombo !! 0))) (0,50)
+
+      let inters = intersect coordCombo $ mPos w
+
+      if (length inters) > 0
+      then do drawText r (pack (show $ (((inters) !! 0)))) (0,100)
+      else pure()
+
+
+
+      if elem (a-10, b-10) $ mPos w
+        then do drawMarker r (t !! 3) (a-10, b-10)
+      else pure()
 
     letters :: Text
     letters = (pack $ insertEveryN 11 1 ' ' $ insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! boardSize)) ['A'..'Z'])
