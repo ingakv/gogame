@@ -345,22 +345,14 @@ drawWorld r t w = do
       let lix = [(a-20) .. (a)]
       let liy = [(b-20) .. (b)]
 
-      let coordCombo = [ (x,y) | x <- lix, y <- liy ]
-
-
-      drawText r (pack (show $ (coordCombo !! 0))) (0,50)
-
-      let inters = intersect coordCombo $ mPos w
+      let inters = intersect [ (x,y) | x <- lix, y <- liy ] $ mPos w
 
       if (length inters) > 0
-      then do drawText r (pack (show $ (((inters) !! 0)))) (0,100)
+      then do
+        drawMarker r (t !! 4) ((inters) !! 0)
       else pure()
 
 
-
-      if elem (a-10, b-10) $ mPos w
-        then do drawMarker r (t !! 3) (a-10, b-10)
-      else pure()
 
     letters :: Text
     letters = (pack $ insertEveryN 11 1 ' ' $ insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! boardSize)) ['A'..'Z'])
