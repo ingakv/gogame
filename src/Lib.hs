@@ -154,13 +154,20 @@ pressWorld w = w { board = newMap, curColor = newColor }
             -- If it was, extract the placement of the slot
             let index = getPlacement 0 $ fromJust $ elemIndex (inters) $ mPos w
 
-            -- Replace the slot with the new one
-            let newRow = replace (fst index) (curColor w) ((board w) !! (snd index))
+            -- Checks if the slot is already occupied
+            if isEmpty ((board w !! snd index) !! fst index)
+            then do
+              -- Replace the slot with the new one
+              let newRow = replace (fst index) (curColor w) ((board w) !! (snd index))
 
-            -- Switch the active color
-            (replace (snd index) newRow (board w), switchColor w)
+              -- Switch the active color
+              (replace (snd index) newRow (board w), switchColor w)
+
+            else (board w, curColor w)
 
           else (board w, curColor w)
+
+
 
 
 
@@ -179,12 +186,16 @@ isBlack :: Slot -> Bool
 isBlack Black = True
 isBlack _ = False
 
+isEmpty :: Slot -> Bool
+isEmpty Empty = True
+isEmpty _ = False
 
-setEmpty :: Slot -> Slot
-setEmpty _ = Empty
 
-setWhite :: Slot -> Slot
-setWhite _ = White
+-- Checks if the two given colors are black and white
+diffColor :: Slot -> Slot -> Bool
+diffColor Black White = True
+diffColor White Black = True
+diffColor _ _ = False
 
 idleWorld :: World -> World
 idleWorld = id
