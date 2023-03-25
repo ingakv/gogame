@@ -6,24 +6,14 @@ module Draw (
 
 
 import Datatypes
-import Lib (
-    boardSize
-  , markerPos
-  , isBlack
-  , isWhite
-  , insertEveryN
-  , windowSize
-  , textColor
-  , initialWorld
-  , updateWorld
-  )
+import Lib
 
 
 import qualified SDL
 import qualified Common as C
 
 import Data.Text        (Text, pack)
-import Data.List        (intersect)
+import Data.List        (intersect, elemIndex)
 import Control.Monad.Loops    (iterateUntilM)
 import Control.Monad          (void)
 
@@ -31,17 +21,6 @@ import SDL.Font
 
 
 
-
--- Given the renderer, and the texture and the state of the World,
--- we can render the world. Note that the rendering results in an IO action.
--- This is a wrapper method that clears the rendering target, draws in the window,
--- and swaps the contexts. The actual drawing is done in drawWorld below.
-renderWorld :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
-renderWorld r t w = do
-  SDL.clear r
-  drawBackground r (t !! 0) windowSize
-  drawWorld r t w
-  SDL.present r
 
 
 
@@ -61,23 +40,34 @@ mainApp w =
 
       let t = [t1,t2,t3,t4,t5,t6]
 
-
       -- we create an utility curry for us here
-      let doRender = renderWorld r t
-
+      let doRender = renderWorld r
 
       void $ iterateUntilM
         exiting
         (\xw ->
              SDL.pollEvents >>= (\xw' -> xw' <$ doRender xw') . updateWorld xw
         )
-        initialWorld
+        $ initialWorld t
 
       -- when we are done with the renderer, we need to clean up
       SDL.destroyTexture (fst t1)
       SDL.destroyTexture (fst t2)
       SDL.destroyTexture (fst t3)
       SDL.destroyTexture (fst t4)
+      SDL.destroyTexture (fst t5)
+      SDL.destroyTexture (fst t6)
+
+
+-- Given the renderer, and the texture and the state of the World,
+-- we can render the world. Note that the rendering results in an IO action.
+-- This is a wrapper method that clears the rendering target, draws in the window,
+-- and swaps the contexts. The actual drawing is done in drawWorld below.
+renderWorld :: SDL.Renderer -> World -> IO ()
+renderWorld r w = do
+  SDL.clear r
+  drawWorld r (textures w) w
+  SDL.present r
 
 
 
@@ -104,6 +94,7 @@ drawText r t (x, y) = do
 drawWorld :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
 drawWorld r t w = do
 
+  drawBackground r (t !! 0) windowSize
 
   drawBoard r (t !! 1)
 
@@ -126,9 +117,7 @@ drawWorld r t w = do
   checkMouse
 
 
-
   where
-
     checkMouse :: IO ()
     checkMouse = do
       let a = fst $ mouseCoords w
@@ -138,10 +127,12 @@ drawWorld r t w = do
       let liy = [(b-20) .. (b)]
 
       let inters = intersect [ (x,y) | x <- lix, y <- liy ] $ mPos w
+      drawText r (pack (show $ inters)) (0,50)
 
       if (length inters) > 0
       then do
         drawMarker r (t !! 4) ((inters) !! 0)
+        drawText r (pack (show $ fromJust $ elemIndex (inters !! 0) $ mPos w)) (0,100)
       else pure()
 
 
@@ -188,8 +179,6 @@ drawWorld r t w = do
         then do
           checkBoard 0 (y+1)
         else pure()
-
-
 
 
 

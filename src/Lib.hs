@@ -3,12 +3,12 @@
 module Lib where
 
 import qualified SDL
-import qualified Common as C
 
 import Data.Foldable          (foldl')
 
 import SDL.Font
 import Data.List.Split
+import Data.List        (intersect, elemIndex)
 
 import Datatypes
 
@@ -58,22 +58,14 @@ allMarkerPos x y size li = do
 
 
 
-
-initialWorld :: World
-initialWorld = World
+initialWorld :: [(SDL.Texture, SDL.TextureInfo)] -> World
+initialWorld tx = World
   { exiting = False
   , slotMap = initBoard boardSize boardSize boardSize []
   , mouseCoords = (0,0)
-  , slots = initialSlots
-  , textures = []
+  , textures = tx
   , mPos = allMarkerPos (boardSize-1)  (boardSize-1) (boardSize-1) []
   }
-
-
-initialSlots :: SlotMap
-initialSlots = SlotMap
-  { topLeft    = Empty }
-
 
 
 
@@ -91,75 +83,83 @@ payloadToIntent SDL.QuitEvent            = Quit -- window CLOSE pressed
 payloadToIntent (SDL.KeyboardEvent e)    = -- When Q is pressed, quit also
   if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeQ then Quit else Idle
 payloadToIntent (SDL.MouseMotionEvent e) = motionIntent e
---payloadToIntent (SDL.MouseButtonEvent e) = buttonIntent e
+payloadToIntent (SDL.MouseButtonEvent e) = buttonIntent e
 payloadToIntent _                        = Idle
-
 
 
 -- Convert mouse motion event to Intent
 motionIntent :: SDL.MouseMotionEventData -> Intent
 motionIntent e = (MouseMoved (fromIntegral x, fromIntegral y))
   where
-    q = selectTopLeft x y
     -- observe clever use of pattern matching to get x and y from the event!
     (SDL.P (SDL.V2 x y)) = SDL.mouseMotionEventPos e
 
 
 buttonIntent :: SDL.MouseButtonEventData -> Intent
-buttonIntent e = t q
+buttonIntent e = Press Black
   where
-    q = selectTopLeft x y
+    q = selectSlot x y
     (SDL.P (SDL.V2 x y)) = SDL.mouseButtonEventPos e
-    t = if SDL.mouseButtonEventMotion e == SDL.Pressed
-           then Press
-           else Release
 
 
-selectTopLeft :: (Num a, Ord a) => a -> a -> Slot
-selectTopLeft x y
-  | x >= 3200 && y <  2400 = Empty
+
+selectSlot :: (Num a, Ord a) => a -> a -> Slot
+selectSlot x y
+  | x > 0 && y <  0 = Black
   | otherwise            = undefined
 
 applyIntent :: Intent -> World -> World
---applyIntent (Press q)   = pressWorld q
---applyIntent (Release q) = releaseWorld q
+applyIntent (Press q)   = pressWorld 5 5
 --applyIntent (Hover q)   = hoverWorld q
 --applyIntent (Leave q)   = leaveWorld q
 applyIntent (MouseMoved coords)  = hoverWorld coords
 applyIntent Idle        = idleWorld
 applyIntent Quit        = quitWorld
 
-updateSlotMap :: (Slot -> Slot) -> Slot -> SlotMap -> SlotMap
-updateSlotMap f _    (SlotMap tr) = SlotMap (f tr)
 
 {-
-pressWorld :: Slot -> World -> World
-pressWorld q w = w { slots = slots' }
-  where slots' = updateSlotMap setDown id q (slots w)
-
 
 releaseWorld :: Slot -> World -> World
-releaseWorld q w = w { slots = slots' }
-  where slots' = updateSlotMap setUp id q (slots w)
+releaseWorld q w = w { slots = slotts }
+  where slotts = updateSlotMap setWhite (slots w)
 
 leaveWorld :: Slot -> World -> World
-leaveWorld q w = w { slots = slots' }
-  where slots' = updateSlotMap setOut setOver q (slots w)
-
+leaveWorld q w = w { slots = slotts }
+  where slotts = updateSlotMap setOut setOver q (slots w)
 
 -}
+
+
+pressWorld :: Int -> Int -> World -> World
+pressWorld x y w = w { slotMap = newMap }
+  where
+        replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
+
+        getPlacement x y
+          | y < boardSize = (x,y)
+          | otherwise = getPlacement (x+1) (y-boardSize)
+
+        a = fst $ mouseCoords w
+        b = snd $ mouseCoords w
+
+        lix = [(a-20) .. (a)]
+        liy = [(b-20) .. (b)]
+
+        inters = intersect [ (x,y) | x <- lix, y <- liy ] $ mPos w
+
+        newMap =
+          if (length inters) > 0
+          then do
+            let index = getPlacement 0 $ fromJust $ elemIndex (inters !! 0) $ mPos w
+
+            let newRow = replace (fst index) White ((slotMap w) !! (snd index))
+            replace (snd index) newRow (slotMap w)
+          else (slotMap w)
+
+
 
 hoverWorld :: (Int, Int) -> World -> World
 hoverWorld coords w = w { mouseCoords = coords }
-
-{--
-placeMarker :: Char -> Int -> [[String]] -> [[String]]
-placeMarker column row board
-  | isDigit column = board
-  | otherwise = insertAt (insertAt ("X") (fromJust(elemIndex (toUpper column) ['A'..'Z'])) (delete ((board !! (fromJust(elemIndex (toUpper column) ['A'..'Z'])-1)) !! (row-1)) (board !! (row-1)))) (row-1) (delete (board !! (row-1)) ((board)))
-
-
--}
 
 
 -- Checks whether a given slot is empty or not (occupied by a marker)
@@ -178,22 +178,12 @@ isBlack _ = False
 
 setEmpty :: Slot -> Slot
 setEmpty _ = Empty
-setOut :: Slot -> Slot
-setOut _ = Empty
 
-setDown :: Slot -> Slot
-setDown _ = Empty
+setWhite :: Slot -> Slot
+setWhite _ = White
 
-setUp :: Slot -> Slot
-setUp _ = Empty
-
-
-setOver :: Slot -> Slot
-setOver _ = White
-
-
-
-
+setBlack :: Slot -> Slot
+setBlack _ = Black
 
 idleWorld :: World -> World
 idleWorld = id
@@ -221,4 +211,10 @@ insertAt newElement _ [] = [newElement]
 insertAt newElement i (a:as)
   | i <= 0 = newElement:a:as
   | otherwise = a : insertAt newElement (i - 1) as
+
+
+fromJust :: Maybe Int -> Int
+fromJust (Just x) = x
+
+
 

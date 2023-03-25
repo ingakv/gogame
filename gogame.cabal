@@ -41,6 +41,7 @@ library
     , text
     , monad-loops
     , sdl2-ttf
+    , containers
   default-language: Haskell2010
 
 executable gogame-exe

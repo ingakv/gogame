@@ -3,7 +3,7 @@
 module Main (main) where
 
 import qualified Common as C
-import Lib
+import Lib (windowSize)
 import Draw
 
 main :: IO ()
