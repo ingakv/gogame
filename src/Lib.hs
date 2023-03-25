@@ -61,10 +61,11 @@ allMarkerPos x y size li = do
 initialWorld :: [(SDL.Texture, SDL.TextureInfo)] -> World
 initialWorld tx = World
   { exiting = False
-  , slotMap = initBoard boardSize boardSize boardSize []
+  , board = initBoard boardSize boardSize boardSize []
   , mouseCoords = (0,0)
   , textures = tx
   , mPos = allMarkerPos (boardSize-1)  (boardSize-1) (boardSize-1) []
+  , curColor = White
   }
 
 
@@ -96,65 +97,72 @@ motionIntent e = (MouseMoved (fromIntegral x, fromIntegral y))
 
 
 buttonIntent :: SDL.MouseButtonEventData -> Intent
-buttonIntent e = Press Black
+buttonIntent e = t
   where
-    q = selectSlot x y
     (SDL.P (SDL.V2 x y)) = SDL.mouseButtonEventPos e
+    t = if SDL.mouseButtonEventMotion e == SDL.Pressed
+         then Press
+         else Idle
 
 
-
-selectSlot :: (Num a, Ord a) => a -> a -> Slot
-selectSlot x y
-  | x > 0 && y <  0 = Black
-  | otherwise            = undefined
 
 applyIntent :: Intent -> World -> World
-applyIntent (Press q)   = pressWorld 5 5
---applyIntent (Hover q)   = hoverWorld q
---applyIntent (Leave q)   = leaveWorld q
+applyIntent (Press)   = pressWorld
 applyIntent (MouseMoved coords)  = hoverWorld coords
 applyIntent Idle        = idleWorld
 applyIntent Quit        = quitWorld
 
 
-{-
-
-releaseWorld :: Slot -> World -> World
-releaseWorld q w = w { slots = slotts }
-  where slotts = updateSlotMap setWhite (slots w)
-
-leaveWorld :: Slot -> World -> World
-leaveWorld q w = w { slots = slotts }
-  where slotts = updateSlotMap setOut setOver q (slots w)
-
--}
-
-
-pressWorld :: Int -> Int -> World -> World
-pressWorld x y w = w { slotMap = newMap }
+intersect' :: World -> (Int,Int)
+intersect' w = inter
   where
+    a = fst $ mouseCoords w
+    b = snd $ mouseCoords w
+
+    -- Creates two lists consisting of all of the coordinates within 20 points of the mouse
+    lix = [(a-20) .. (a)]
+    liy = [(b-20) .. (b)]
+
+    -- Goes over all of the positions of the slots and sees if any of the slots overlap
+    -- If they do, the selected slots coordinates will be returned
+    inters = intersect [ (x,y) | x <- lix, y <- liy ] $ mPos w
+
+    inter =
+      if (length inters) > 0
+      then inters !! 0
+      else (-1,-1)
+
+
+
+pressWorld :: World -> World
+pressWorld w = w { board = newMap, curColor = newColor }
+  where
+        -- Function for replacing an element in a list
         replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
 
+        -- Converts the number into coordinates
         getPlacement x y
           | y < boardSize = (x,y)
           | otherwise = getPlacement (x+1) (y-boardSize)
 
-        a = fst $ mouseCoords w
-        b = snd $ mouseCoords w
+        inters = intersect' w
 
-        lix = [(a-20) .. (a)]
-        liy = [(b-20) .. (b)]
-
-        inters = intersect [ (x,y) | x <- lix, y <- liy ] $ mPos w
-
-        newMap =
-          if (length inters) > 0
+        (newMap, newColor) =
+          -- Checks if the mouse was hovering over a slot when it was pressed
+          if (fst inters) >= 0
           then do
-            let index = getPlacement 0 $ fromJust $ elemIndex (inters !! 0) $ mPos w
+            -- If it was, extract the placement of the slot
+            let index = getPlacement 0 $ fromJust $ elemIndex (inters) $ mPos w
 
-            let newRow = replace (fst index) White ((slotMap w) !! (snd index))
-            replace (snd index) newRow (slotMap w)
-          else (slotMap w)
+            -- Replace the slot with the new one
+            let newRow = replace (fst index) (curColor w) ((board w) !! (snd index))
+
+            -- Switch the active color
+            (replace (snd index) newRow (board w), switchColor w)
+
+          else (board w, curColor w)
+
+
 
 
 
@@ -162,11 +170,7 @@ hoverWorld :: (Int, Int) -> World -> World
 hoverWorld coords w = w { mouseCoords = coords }
 
 
--- Checks whether a given slot is empty or not (occupied by a marker)
-isEmpty :: Slot -> Bool
-isEmpty Empty = True
-isEmpty _ = False
-
+-- Checks the color of a given slot
 isWhite :: Slot -> Bool
 isWhite White = True
 isWhite _ = False
@@ -182,11 +186,17 @@ setEmpty _ = Empty
 setWhite :: Slot -> Slot
 setWhite _ = White
 
-setBlack :: Slot -> Slot
-setBlack _ = Black
-
 idleWorld :: World -> World
 idleWorld = id
+
+
+switchColor :: World -> Slot
+switchColor w = newColor
+  where
+    newColor
+      | isBlack $ curColor w = White
+      | otherwise = Black
+
 
 
 quitWorld :: World -> World

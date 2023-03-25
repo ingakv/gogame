@@ -13,7 +13,6 @@ import qualified SDL
 import qualified Common as C
 
 import Data.Text        (Text, pack)
-import Data.List        (intersect, elemIndex)
 import Control.Monad.Loops    (iterateUntilM)
 import Control.Monad          (void)
 
@@ -107,8 +106,6 @@ drawWorld r t w = do
   printNumbers boardSize 25
   printNumbers boardSize $ 730
 
-
-
   -- Prints mouse coordinates
   drawText r (pack (show $ mouseCoords w)) (0,0)
 
@@ -118,21 +115,19 @@ drawWorld r t w = do
 
 
   where
+
+    -- Checks if the mouse is hovering over a slot
     checkMouse :: IO ()
     checkMouse = do
-      let a = fst $ mouseCoords w
-      let b = snd $ mouseCoords w
 
-      let lix = [(a-20) .. (a)]
-      let liy = [(b-20) .. (b)]
+      let inters = intersect' w
 
-      let inters = intersect [ (x,y) | x <- lix, y <- liy ] $ mPos w
-      drawText r (pack (show $ inters)) (0,50)
-
-      if (length inters) > 0
-      then do
-        drawMarker r (t !! 4) ((inters) !! 0)
-        drawText r (pack (show $ fromJust $ elemIndex (inters !! 0) $ mPos w)) (0,100)
+      if (fst inters) >= 0
+      then
+        -- Draws the hover marker in the correct color
+        if isBlack $ curColor w
+          then do drawMarker r (t !! 5) (inters)
+        else drawMarker r (t !! 4) (inters)
       else pure()
 
 
@@ -166,9 +161,9 @@ drawWorld r t w = do
     -- Checks if a slot is empty, and draws a marker in that spot if it isn't
     checkBoard :: Int -> Int -> IO ()
     checkBoard x y = do
-      if (isWhite ((slotMap w !! x) !! y))
+      if (isWhite ((board w !! x) !! y))
         then do drawMarker r (t !! 2) (markerPos x y)
-      else if (isBlack ((slotMap w !! x) !! y))
+      else if (isBlack ((board w !! x) !! y))
         then do drawMarker r (t !! 3) (markerPos x y)
       else pure()
 
@@ -208,13 +203,13 @@ verLine r n = do
 -- Draw an empty board with texture
 drawBoard :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> IO ()
 drawBoard r (t, ti) = do
-  SDL.copy r t boardTexture board
+  SDL.copy r t boardTexture board'
   where
     marginx = 70
     marginy = 50
     s = fromIntegral (boardSize-1)*35 + 11
     boardTexture = (Just $ C.mkRect 0 0 (SDL.textureWidth ti) (SDL.textureHeight ti))
-    board = (Just $ C.mkRect marginx marginy s s)
+    board' = (Just $ C.mkRect marginx marginy s s)
 
 
 
