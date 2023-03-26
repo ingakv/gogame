@@ -10,7 +10,7 @@ import SDL.Font
 import Data.List.Split
 import Data.List        (intersect, elemIndex)
 
-import Datatypes
+import DataTypes as DT
 
 
 windowSize :: (Int, Int)
@@ -26,14 +26,14 @@ textColor = SDL.V4 150 0 0 255
 
 -- Create an empty board based on a given size
 initBoard :: Int -> Int -> Int -> [Slot] -> [[Slot]]
-initBoard x y size li = do
-  let finalList = chunksOf size li
+initBoard x y s li = do
+  let finalList = chunksOf s li
   if x > 0
   then do
-      initBoard (x-1) y size (insertAt Empty 0 li)
+      initBoard (x-1) y s (insertAt Empty 0 li)
   else if y > 1
     then do
-      initBoard size (y-1) size li
+      initBoard s (y-1) s li
     else
       finalList
 
@@ -45,13 +45,13 @@ markerPos x y = (65 + 35*x, 45 + 35*y)
 
 -- An array of all marker positions
 allMarkerPos :: Int -> Int -> Int -> [(Int, Int)] -> [(Int, Int)]
-allMarkerPos x y size li = do
+allMarkerPos x y s li = do
   if x >= 0
   then do
-      allMarkerPos (x-1) y size (insertAt (markerPos x y) 0 li)
+      allMarkerPos (x-1) y s (insertAt (markerPos x y) 0 li)
   else if y > 0
     then do
-      allMarkerPos size (y-1) size li
+      allMarkerPos s (y-1) s li
     else
       li
 
@@ -64,10 +64,13 @@ initialWorld tx = World
   , board = initBoard boardSize boardSize boardSize []
   , mouseCoords = (0,0)
   , textures = tx
-  , mPos = allMarkerPos (boardSize-1)  (boardSize-1) (boardSize-1) []
+  , allSlotPos = allMarkerPos (boardSize-1)  (boardSize-1) (boardSize-1) []
+  , whiteMarkerPos = []
+  , blackMarkerPos = []
   , curColor = White
+  , whiteGroups = []
+  , blackGroups = []
   }
-
 
 
 
@@ -82,7 +85,10 @@ updateWorld w
 payloadToIntent :: SDL.EventPayload -> Intent
 payloadToIntent SDL.QuitEvent            = Quit -- window CLOSE pressed
 payloadToIntent (SDL.KeyboardEvent e)    = -- When Q is pressed, quit also
-  if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeQ then Quit else Idle
+  if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeQ then Quit else
+  if (SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeS)
+   && (SDL.keyboardEventKeyMotion e == SDL.Pressed)
+   then Skip else Idle
 payloadToIntent (SDL.MouseMotionEvent e) = motionIntent e
 payloadToIntent (SDL.MouseButtonEvent e) = buttonIntent e
 payloadToIntent _                        = Idle
@@ -99,18 +105,17 @@ motionIntent e = (MouseMoved (fromIntegral x, fromIntegral y))
 buttonIntent :: SDL.MouseButtonEventData -> Intent
 buttonIntent e = t
   where
-    (SDL.P (SDL.V2 x y)) = SDL.mouseButtonEventPos e
     t = if SDL.mouseButtonEventMotion e == SDL.Pressed
          then Press
          else Idle
 
 
-
 applyIntent :: Intent -> World -> World
-applyIntent (Press)   = pressWorld
-applyIntent (MouseMoved coords)  = hoverWorld coords
+applyIntent Press       = pressWorld
 applyIntent Idle        = idleWorld
 applyIntent Quit        = quitWorld
+applyIntent Skip        = skipTurn
+applyIntent (MouseMoved coords)  = hoverWorld coords
 
 
 intersect' :: World -> (Int,Int)
@@ -125,7 +130,7 @@ intersect' w = inter
 
     -- Goes over all of the positions of the slots and sees if any of the slots overlap
     -- If they do, the selected slots coordinates will be returned
-    inters = intersect [ (x,y) | x <- lix, y <- liy ] $ mPos w
+    inters = intersect [ (x,y) | x <- lix, y <- liy ] $ allSlotPos w
 
     inter =
       if (length inters) > 0
@@ -133,40 +138,114 @@ intersect' w = inter
       else (-1,-1)
 
 
+ -- Converts the index number of a slot into coordinates
+getPlacement :: Int -> Int -> (Int, Int)
+getPlacement x y
+  | y < boardSize = (x,y)
+  | otherwise = getPlacement (x+1) (y-boardSize)
 
+
+
+-- Updates updateMarkerPos and updateGroups for every press
 pressWorld :: World -> World
-pressWorld w = w { board = newMap, curColor = newColor }
+pressWorld w = w2
+
   where
-        -- Function for replacing an element in a list
-        replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
 
-        -- Converts the number into coordinates
-        getPlacement x y
-          | y < boardSize = (x,y)
-          | otherwise = getPlacement (x+1) (y-boardSize)
+    w1 = updateMarkerPos (boardSize-1) (boardSize-1) w { board = newMap, curColor = newColor } [] []
+    w2 = updateGroups ((length $ whiteMarkerPos w)-1) ((length $ blackMarkerPos w)-1) w1 [] []
 
-        inters = intersect' w
+    -- Function for replacing an element in a list
+    replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
 
-        (newMap, newColor) =
-          -- Checks if the mouse was hovering over a slot when it was pressed
-          if (fst inters) >= 0
-          then do
-            -- If it was, extract the placement of the slot
-            let index = getPlacement 0 $ fromJust $ elemIndex (inters) $ mPos w
 
-            -- Checks if the slot is already occupied
-            if isEmpty ((board w !! snd index) !! fst index)
-            then do
-              -- Replace the slot with the new one
-              let newRow = replace (fst index) (curColor w) ((board w) !! (snd index))
+    -- Get the slot where the mouse is currently hovering over
+    inters = intersect' w
 
-              -- Switch the active color
-              (replace (snd index) newRow (board w), switchColor w)
+    (newMap, newColor) =
+      -- Checks if the mouse was hovering over a slot when it was pressed
+      if (fst inters) >= 0
+      then do
+        -- If it was, extract the placement of the slot
+        let index = getPlacement 0 $ fromJust $ elemIndex (inters) $ allSlotPos w
 
-            else (board w, curColor w)
+        -- Checks if the slot is already occupied
+        if isEmpty ((board w !! snd index) !! fst index)
+        then do
+          -- Replace the slot with the new one
+          let newRow = replace (fst index) (curColor w) ((board w) !! (snd index))
 
-          else (board w, curColor w)
+          -- Switch the active color
+          (replace (snd index) newRow (board w), switchColor w)
 
+        else (board w, curColor w)
+
+      else (board w, curColor w)
+
+
+
+updateMarkerPos :: Int -> Int -> World -> [(Int, Int)] -> [(Int, Int)] -> World
+updateMarkerPos x y w wli bli = do
+  if x >= 0
+    then do
+        if isWhite (((board w) !! x) !! y)
+        then do updateMarkerPos (x-1) y w (insertAt (x,y) 0 $ wli) bli
+
+        else
+          if isBlack (((board w) !! x) !! y)
+          then do updateMarkerPos (x-1) y w wli (insertAt (x,y) 0 $ bli)
+          else updateMarkerPos (x-1) y w wli bli
+  else
+    if y > 0
+    then do
+      updateMarkerPos (boardSize-1) (y-1) w wli bli
+    else w { whiteMarkerPos = wli, blackMarkerPos = bli }
+
+
+
+
+findGroups :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)] -> [(Int, Int)]
+findGroups m mPos li = do
+  if elem m li then li
+  else {-do
+    if elem a mPos then let newLi = findGroups a mPos (insertAt a 0 $ newLi) ; li = newLi
+    if elem b mPos then let newLi = findGroups b mPos (insertAt b 0 $ newLi) else li
+    if elem c mPos then let newLi = findGroups c mPos (insertAt c 0 $ newLi) else li
+    if elem d mPos then let newLi = findGroups d mPos (insertAt d 0 $ newLi) else li-}
+    li
+
+
+
+
+-- Updates the coherent groups on the board
+updateGroups :: Int -> Int -> World -> [[(Int, Int)]] -> [[(Int, Int)]] -> World
+updateGroups x y w wli bli = do
+  -- x is the amount of white markers currently on the board
+  if x > 0
+  then do
+    -- Find the potential group
+    let group = findGroups ((whiteMarkerPos w) !! x) (whiteMarkerPos w) []
+
+    -- Insert them into the array
+    let new = if length group > 0 then (insertAt group 0 $ wli) else wli
+
+    -- Loops through each white marker
+    updateGroups (x-1) y w new bli
+
+
+  -- Repeat for the black markers
+  else
+    if y > 0
+    then do
+      let group = findGroups ((blackMarkerPos w) !! x) (blackMarkerPos w) []
+
+      let new = if length group > 0 then (insertAt group 0 $ bli) else bli
+
+
+      updateGroups x (y-1) w wli new
+
+    -- When all markers on the board have been checked, update these two world variables
+    else w { whiteGroups = wli, blackGroups = bli }
 
 
 
@@ -191,12 +270,6 @@ isEmpty Empty = True
 isEmpty _ = False
 
 
--- Checks if the two given colors are black and white
-diffColor :: Slot -> Slot -> Bool
-diffColor Black White = True
-diffColor White Black = True
-diffColor _ _ = False
-
 idleWorld :: World -> World
 idleWorld = id
 
@@ -213,6 +286,9 @@ switchColor w = newColor
 quitWorld :: World -> World
 quitWorld w = w { exiting = True }
 
+
+skipTurn :: World -> World
+skipTurn w = w { curColor = switchColor w }
 
 ------------------ A few small useful functions -----------------------------
 
@@ -236,6 +312,7 @@ insertAt newElement i (a:as)
 
 fromJust :: Maybe Int -> Int
 fromJust (Just x) = x
+fromJust Nothing = -1
 
 
 

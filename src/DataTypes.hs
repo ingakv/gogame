@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Datatypes where
+module DataTypes where
 
 import qualified SDL
 
@@ -8,6 +8,7 @@ data Intent
   = Idle
   | MouseMoved (Int, Int)
   | Quit
+  | Skip
   | Press
 
 
@@ -16,8 +17,12 @@ data World = World
   , mouseCoords   :: (Int, Int)
   , board :: [[Slot]]
   , textures :: [(SDL.Texture, SDL.TextureInfo)]
-  , mPos :: [(Int, Int)]
+  , allSlotPos :: [(Int, Int)]
+  , whiteMarkerPos :: [(Int, Int)]
+  , blackMarkerPos :: [(Int, Int)]
   , curColor :: Slot
+  , whiteGroups :: [[(Int, Int)]]
+  , blackGroups :: [[(Int, Int)]]
   }
 
 

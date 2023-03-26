@@ -24,10 +24,11 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      GameRules
+    ,  Lib
     , Common
     , Draw
-    , Datatypes
+    , DataTypes
   other-modules:
       Paths_gogame
   hs-source-dirs:
