@@ -13,11 +13,10 @@ import qualified SDL
 import qualified Common as C
 
 import Data.Text        (Text, pack)
+import Control.Monad          (void)
 import Control.Monad.Loops    (iterateUntilM)
 
 import SDL.Font
-
-
 
 
 -- Main entry to our application logic. It takes the handle to the SDL Window,
@@ -27,6 +26,7 @@ mainApp :: SDL.Window -> IO ()
 mainApp w =
     C.withRenderer w $ \r -> do
 
+      -- Loading the tetures
       t1 <- C.loadTextureWithInfo r "./assets/background.png"
       t2 <- C.loadTextureWithInfo r "./assets/wood.png"
       t3 <- C.loadTextureWithInfo r "./assets/white_marker.png"
@@ -35,25 +35,25 @@ mainApp w =
       t6 <- C.loadTextureWithInfo r "./assets/black_marker_hover.png"
 
       let t = [t1,t2,t3,t4,t5,t6]
+      font <- SDL.Font.load "./ttf/roboto/Roboto-Regular.ttf" 14
 
       -- we create an utility curry for us here
       let doRender = Draw.renderWorld r
 
---      void $ iterateUntilM
-      _ <- iterateUntilM
+
+      void $ iterateUntilM
         DT.exiting
-        (\xw ->
-             SDL.pollEvents >>= (\xw' -> xw' <$ doRender xw') . Lib.updateWorld xw
+        (\w ->
+             SDL.pollEvents >>= (\w' -> w' <$ doRender w') . Lib.updateWorld w
+--             SDL.pollEvents >>= (\xw' -> xw' <$ doRender xw') . Lib.updateWorld xw
         )
-        $ Lib.initialWorld t
+        (Lib.initialWorld t font)
 
       -- when we are done with the renderer, we need to clean up
-      SDL.destroyTexture (fst t1)
-      SDL.destroyTexture (fst t2)
-      SDL.destroyTexture (fst t3)
-      SDL.destroyTexture (fst t4)
-      SDL.destroyTexture (fst t5)
-      SDL.destroyTexture (fst t6)
+      Draw.destroyTextures t
+
+destroyTextures :: [(SDL.Texture, SDL.TextureInfo)] -> IO()
+destroyTextures t = mapM_ SDL.destroyTexture (map fst t)
 
 
 -- Given the renderer, and the texture and the state of the World,
@@ -66,17 +66,21 @@ renderWorld r w = do
   drawWorld r (textures w) w
   SDL.present r
 
+drawWorld' :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
+drawWorld' r t w = do
+  drawBackground r (t !! 0) Lib.windowSize
 
+  drawBoard r (t !! 1)
+  pure()
 
 
 ------------- DRAW FUNCTIONS ----------------------
 
 
 -- Draw text
-drawText :: SDL.Renderer -> Text -> (Int, Int) -> IO ()
-drawText r t (x, y) = do
-    font <- SDL.Font.load "./ttf/roboto/Roboto-Regular.ttf" 14
-    textSurf <- SDL.Font.solid font Lib.textColor t
+drawText :: SDL.Renderer -> World -> Text -> (Int, Int) -> IO ()
+drawText r world t (x, y) = do
+    textSurf <- SDL.Font.solid (font world) Lib.textColor t
     surf <- SDL.createTextureFromSurface r textSurf
     info <- SDL.queryTexture surf
     let w = SDL.textureWidth info
@@ -86,41 +90,21 @@ drawText r t (x, y) = do
     SDL.destroyTexture surf
 
 
-
 -- The actual method for drawing that is used by the rendering method above.
 drawWorld :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
 drawWorld r t w = do
-
   drawBackground r (t !! 0) Lib.windowSize
 
   drawBoard r (t !! 1)
 
-  drawLines' 0
+  drawLines' r 0
 
-  checkBoard 0 0
+  checkBoard r [t!!2,t!!3] w 0 0
 
-  drawText r letters (70, 15)
-  drawText r letters (70, (snd Lib.windowSize) - 50)
-  printNumbers Lib.boardSize 25
-  printNumbers Lib.boardSize $ 730
-
-  drawText r "White groups:" (750,0)
-  drawText r (pack $ show $ whiteGroups w) (750,20)
-  drawText r (pack $ show $ whiteMarkerPos w) (750,50)
-  drawText r "Black groups:" (750,100)
-  drawText r (pack $ show $ blackGroups w) (750,120)
-  drawText r (pack $ show $ blackMarkerPos w) (750,150)
-
-
-  drawText r "Press Q to Quit" (800,250)
-  drawText r "Press S to Skip turn" (800,300)
-
-  drawText r (pack $ show $ (length $ whiteGroups w)) (0,150)
-
+  drawUI r w
 
   -- Hover marker
   checkMouse
-
 
   where
 
@@ -139,49 +123,37 @@ drawWorld r t w = do
       else pure()
 
 
+drawUI :: SDL.Renderer -> World -> IO ()
+drawUI r w = do
 
+  drawText r w letters (70, 15)
+  drawText r w letters (70, (snd Lib.windowSize) - 50)
+  printNumbers Lib.boardSize 25
+  printNumbers Lib.boardSize $ 730
+
+  drawText r w "White groups:" (0,0)
+  drawText r w (pack $ show $ whiteGroups w) (0,20)
+  drawText r w (pack $ show $ whiteMarkerPos w) (750,50)
+  drawText r w "Black groups:" (0,100)
+  drawText r w (pack $ show $ blackGroups w) (0,120)
+  drawText r w (pack $ show $ blackMarkerPos w) (750,120)
+
+  drawText r w "Press Q to Quit" (800,250)
+  drawText r w "Press S to Skip turn" (800,300)
+
+    where
     letters :: Text
     letters = (pack $ Lib.insertEveryN 11 1 ' ' $ Lib.insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! Lib.boardSize)) ['A'..'Z'])
 
     printNumbers :: Int -> Int -> IO ()
     printNumbers n posx = do
-      drawText r (pack $ show n) (posx, 10+(35*n))
+      drawText r w (pack $ show n) (posx, 10+(35*n))
       if elem n [2..Lib.boardSize]
        then do printNumbers (n-1) posx
       else pure()
 
 
-  -- Draw the lines where the markers are to be placed along
-    drawLines' :: Int -> IO ()
-    drawLines' n = do
-      horLine r n
-      if elem n [0..Lib.boardSize-2]
-       then do  drawLines' (n+1)
-      else drawVerLines 0
 
-    drawVerLines :: Int -> IO ()
-    drawVerLines n = do
-      verLine r n
-      if elem n [0..Lib.boardSize-2]
-       then do  drawVerLines (n+1)
-      else pure()
-
-    -- Checks if a slot is empty, and draws a marker in that spot if it isn't
-    checkBoard :: Int -> Int -> IO ()
-    checkBoard x y = do
-      if (Lib.isWhite ((board w !! x) !! y))
-        then do drawMarker r (t !! 2) (Lib.markerPos x y)
-      else if (Lib.isBlack ((board w !! x) !! y))
-        then do drawMarker r (t !! 3) (Lib.markerPos x y)
-      else pure()
-
-      if x < (Lib.boardSize-1)
-      then do
-          checkBoard (x+1) y
-      else if y < (Lib.boardSize-1)
-        then do
-          checkBoard 0 (y+1)
-        else pure()
 
 
 
@@ -196,6 +168,7 @@ horLine r n = do
       ay = 50
       by = fromIntegral $ 60 + (Lib.boardSize-1)*35
 
+
 -- Vertical lines
 verLine :: SDL.Renderer -> Int -> IO ()
 verLine r n = do
@@ -205,7 +178,38 @@ verLine r n = do
       bx = fromIntegral $ 80 + (Lib.boardSize-1)*35
       y = fromIntegral $ 55 + n*35
 
+-- Draw the lines where the markers are to be placed along
+drawLines' :: SDL.Renderer -> Int -> IO ()
+drawLines' r n = do
+  horLine r n
+  if elem n [0..Lib.boardSize-2]
+   then do  drawLines' r (n+1)
+  else drawVerLines r 0
 
+drawVerLines :: SDL.Renderer -> Int -> IO ()
+drawVerLines r n = do
+  verLine r n
+  if elem n [0..Lib.boardSize-2]
+   then do  drawVerLines r (n+1)
+  else pure()
+
+
+-- Checks if a slot is empty, and draws a marker in that spot if it isn't
+checkBoard :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> Int -> Int -> IO ()
+checkBoard r tx w x y = do
+  if (Lib.isWhite ((board w !! x) !! y))
+    then do drawMarker r (tx !! 0) (Lib.markerPos x y)
+  else if (Lib.isBlack ((board w !! x) !! y))
+    then do drawMarker r (tx !! 2) (Lib.markerPos x y)
+  else pure()
+
+  if x < (Lib.boardSize-1)
+  then do
+      checkBoard r tx w (x+1) y
+  else if y < (Lib.boardSize-1)
+    then do
+      checkBoard r tx w 0 (y+1)
+    else pure()
 
 
 -- Draw an empty board with texture

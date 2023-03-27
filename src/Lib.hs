@@ -7,8 +7,9 @@ import qualified SDL
 import Data.Foldable          (foldl')
 
 import SDL.Font
-import Data.List.Split
-import Data.List        (intersect, elemIndex, concat, nub, insert, partition)
+import Data.Ord               (comparing)
+import Data.List.Split        (chunksOf)
+import Data.List              (intersect, elemIndex, insert, sort, sortBy, delete, union)
 
 import DataTypes as DT
 
@@ -58,8 +59,8 @@ allMarkerPos x y s li = do
 
 
 
-initialWorld :: [(SDL.Texture, SDL.TextureInfo)] -> World
-initialWorld tx = World
+initialWorld :: [(SDL.Texture, SDL.TextureInfo)] -> Font -> World
+initialWorld tx f = World
   { exiting = False
   , board = initBoard boardSize boardSize boardSize []
   , mouseCoords = (0,0)
@@ -70,6 +71,7 @@ initialWorld tx = World
   , curColor = White
   , whiteGroups = []
   , blackGroups = []
+  , font = f
   }
 
 
@@ -156,9 +158,6 @@ pressWorld w = w2
     w1 = updateMarkerPos (boardSize-1) (boardSize-1) w { board = newMap, curColor = newColor } [] []
     w2 = updateGroups (length $ whiteMarkerPos w) (length $ blackMarkerPos w) w1 [] []
 
-    -- Function for replacing an element in a list
-    replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
-
 
     -- Get the slot where the mouse is currently hovering over
     inters = intersect' w
@@ -234,38 +233,29 @@ checkDown m mPos = do
 findGroups :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 findGroups m mPos = do
   let nbors = (checkLeft m mPos) ++ (checkRight m mPos) ++ (checkUp m mPos) ++ (checkDown m mPos)
-  if length nbors > 0 then nbors
+  if length nbors > 0 then insert m nbors
   else [m]
 
 
 
-splitList :: [[(Int, Int)]] -> ([(Int, Int)], [(Int, Int)], Int, Int)
-splitList li = (singles, groups) (length singles) (length groups)
+fixList :: [[(Int, Int)]] -> [[(Int, Int)]]
+fixList l = remDupSub li bigLi oneSmallerLi (length oneSmallerLi-1)
   where
-    -- Divides the list into the singles and the groups
-    newLi = partition (part) li
-    part x = if x>1 then True else False
-
-    groups :: ([(Int, Int)])
-    groups = concat $ newLi !! 0
-
-    singles :: ([(Int, Int)])
-    singles = newLi !! 1
+    li = completeSort l
+    bigLi = head li
+    maxLen = length bigLi - 1
+    oneSmallerLi = filter (\x -> (length x == maxLen)) li
 
 
 
-weedOutSingles :: [(Int, Int)] -> [(Int, Int)] -> Int -> Int -> [(Int, Int)]
-weedOutSingles si gr x y = do
+-- Removes sublists that consists solely on elements that can all be found in another list
+remDupSub :: [[(Int, Int)]] -> [(Int, Int)] -> [[(Int, Int)]] -> Int -> [[(Int, Int)]]
+remDupSub li bLi sLi x = do
   if x > 0
   then do
-    let newList = if (si !! x) == (gr !! y) then map (filter(/=(si !! x))) gr else gr
-    weedOutSingles si newList (x-1) y
-
-  else weedOutSingles si gr (length si) (y-1)
-
-
-
-
+    let newLi = if union (sLi !! x) bLi == bLi then (delete (sLi !! x) li) else li
+    remDupSub newLi bLi sLi (x-1)
+  else li
 
 
 
@@ -275,15 +265,15 @@ updateGroups x y w wli bli = do
   -- x is the amount of white markers currently on the board
   if x > 0
   then do
+
     -- Find the potential group
     let group = findGroups ((whiteMarkerPos w) !! (x-1)) (whiteMarkerPos w)
 
     -- Insert them into the array
-    let new = splitList $ insert group wli
-    let newList = weedOutSingles (new !! 0) (new !! 1) (new !! 2) (new !! 3)
+    let new = fixList $ insert group wli
 
     -- Loops through each white marker
-    updateGroups (x-1) y w newList bli
+    updateGroups (x-1) y w new bli
 
 
   -- Repeat for the black markers
@@ -292,20 +282,16 @@ updateGroups x y w wli bli = do
     then do
       let group = findGroups ((blackMarkerPos w) !! (y-1)) (blackMarkerPos w)
 
-      let new = splitList $ insert group bli
-      let newList = weedOutSingles (new !! 0) (new !! 1) (new !! 2) (new !! 3)
+      let new = fixList $ insert group bli
 
-      updateGroups x (y-1) w wli newList
+      updateGroups x (y-1) w wli new
 
     -- When all markers on the board have been checked, update these two world variables
     else do
-      let wli' = if length wli > 0 then nub(insert (concat wli) wli) else wli
-      let bli' = if length bli > 0 then nub(insert (concat bli) bli) else bli
+      let wli' = wli
+      let bli' = bli
 
       w { whiteGroups = wli', blackGroups = bli' }
-
-
-
 
 
 
@@ -372,4 +358,16 @@ fromJust (Just x) = x
 fromJust Nothing = -1
 
 
+-- Replacing an element in a list
+replace :: Int -> a -> [a] -> [a]
+replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
+
+
+-- Takes a list of lists and returns the list where all the sublists are sorted
+-- and are ordered from biggest sublist to smallest
+completeSort :: (Ord a) => [[a]] -> [[a]]
+completeSort li
+  | length li >= 1 = li
+  | ((sort $ head li) == head li) = sortBy (flip $ comparing length) li
+  | otherwise = completeSort $ insertAt (sort $ head li) (length li -1) (tail li)
 

@@ -3,6 +3,7 @@
 module DataTypes where
 
 import qualified SDL
+import qualified SDL.Font
 
 data Intent
   = Idle
@@ -17,6 +18,7 @@ data World = World
   , mouseCoords   :: (Int, Int)
   , board :: [[Slot]]
   , textures :: [(SDL.Texture, SDL.TextureInfo)]
+  , font :: SDL.Font.Font
   , allSlotPos :: [(Int, Int)]
   , whiteMarkerPos :: [(Int, Int)]
   , blackMarkerPos :: [(Int, Int)]
