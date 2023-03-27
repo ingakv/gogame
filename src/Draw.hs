@@ -35,7 +35,7 @@ mainApp w =
       t6 <- C.loadTextureWithInfo r "./assets/black_marker_hover.png"
 
       let t = [t1,t2,t3,t4,t5,t6]
-      font <- SDL.Font.load "./ttf/roboto/Roboto-Regular.ttf" 14
+      f <- SDL.Font.load "./ttf/roboto/Roboto-Regular.ttf" 14
 
       -- we create an utility curry for us here
       let doRender = Draw.renderWorld r
@@ -43,11 +43,10 @@ mainApp w =
 
       void $ iterateUntilM
         DT.exiting
-        (\w ->
-             SDL.pollEvents >>= (\w' -> w' <$ doRender w') . Lib.updateWorld w
---             SDL.pollEvents >>= (\xw' -> xw' <$ doRender xw') . Lib.updateWorld xw
+        (\xw ->
+             SDL.pollEvents >>= (\xw' -> xw' <$ doRender xw') . Lib.updateWorld xw
         )
-        (Lib.initialWorld t font)
+        (Lib.initialWorld t f)
 
       -- when we are done with the renderer, we need to clean up
       Draw.destroyTextures t
@@ -66,12 +65,6 @@ renderWorld r w = do
   drawWorld r (textures w) w
   SDL.present r
 
-drawWorld' :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
-drawWorld' r t w = do
-  drawBackground r (t !! 0) Lib.windowSize
-
-  drawBoard r (t !! 1)
-  pure()
 
 
 ------------- DRAW FUNCTIONS ----------------------
@@ -99,15 +92,18 @@ drawWorld r t w = do
 
   drawLines' r 0
 
+  -- Draws the markers currently on the board
   checkBoard r [t!!2,t!!3] w 0 0
 
+  -- Lines
   drawUI r w
 
   -- Hover marker
   checkMouse
 
-  where
+  drawText r w (pack $ show $ mouseCoords w) (0,250)
 
+  where
     -- Checks if the mouse is hovering over a slot
     checkMouse :: IO ()
     checkMouse = do
@@ -200,7 +196,7 @@ checkBoard r tx w x y = do
   if (Lib.isWhite ((board w !! x) !! y))
     then do drawMarker r (tx !! 0) (Lib.markerPos x y)
   else if (Lib.isBlack ((board w !! x) !! y))
-    then do drawMarker r (tx !! 2) (Lib.markerPos x y)
+    then do drawMarker r (tx !! 1) (Lib.markerPos x y)
   else pure()
 
   if x < (Lib.boardSize-1)

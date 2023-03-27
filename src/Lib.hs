@@ -68,7 +68,7 @@ initialWorld tx f = World
   , allSlotPos = allMarkerPos (boardSize-1)  (boardSize-1) (boardSize-1) []
   , whiteMarkerPos = []
   , blackMarkerPos = []
-  , curColor = White
+  , curColor = Black
   , whiteGroups = []
   , blackGroups = []
   , font = f
@@ -106,19 +106,37 @@ motionIntent e = (MouseMoved (fromIntegral x, fromIntegral y))
 
 buttonIntent :: SDL.MouseButtonEventData -> Intent
 buttonIntent e = Press
-  where
 {-
+  where
+
     t = if SDL.mouseButtonEventMotion e == SDL.Pressed
          then Press
          else Idle
 -}
 
+
+
+idleWorld :: World -> World
+idleWorld = id
+
+hoverWorld :: (Int, Int) -> World -> World
+hoverWorld coords w = w { mouseCoords = coords }
+
+quitWorld :: World -> World
+quitWorld w = w { exiting = True }
+
+skipTurn :: World -> World
+skipTurn w = w { curColor = switchColor w }
+
+
+
 applyIntent :: Intent -> World -> World
-applyIntent Press       = pressWorld
 applyIntent Idle        = idleWorld
+applyIntent Press       = pressWorld
+applyIntent (MouseMoved coords)  = hoverWorld coords
 applyIntent Quit        = quitWorld
 applyIntent Skip        = skipTurn
-applyIntent (MouseMoved coords)  = hoverWorld coords
+
 
 
 intersect' :: World -> (Int,Int)
@@ -139,6 +157,17 @@ intersect' w = inter
       if (length inters) > 0
       then inters !! 0
       else (-1,-1)
+
+
+
+switchColor :: World -> Slot
+switchColor w = newColor
+  where
+    newColor
+      | isBlack $ curColor w = White
+      | isWhite $ curColor w = Black
+      | otherwise = Empty
+
 
 
  -- Converts the index number of a slot into coordinates
@@ -287,16 +316,23 @@ updateGroups x y w wli bli = do
       updateGroups x (y-1) w wli new
 
     -- When all markers on the board have been checked, update these two world variables
-    else do
-      let wli' = wli
-      let bli' = bli
-
-      w { whiteGroups = wli', blackGroups = bli' }
+    else w { whiteGroups = wli, blackGroups = bli }
 
 
 
-hoverWorld :: (Int, Int) -> World -> World
-hoverWorld coords w = w { mouseCoords = coords }
+
+-- Takes a list of lists and returns the list where all the sublists are sorted
+-- and are ordered from biggest sublist to smallest
+completeSort :: (Ord a) => [[a]] -> [[a]]
+completeSort li
+  | length li >= 1 = li
+  | ((sort $ head li) == head li) = sortBy (flip $ comparing length) li
+  | otherwise = completeSort $ insertAt (sort $ head li) (length li -1) (tail li)
+
+
+
+
+------------------ A few small useful functions -----------------------------
 
 
 -- Checks the color of a given slot
@@ -313,28 +349,6 @@ isEmpty Empty = True
 isEmpty _ = False
 
 
-idleWorld :: World -> World
-idleWorld = id
-
-
-switchColor :: World -> Slot
-switchColor w = newColor
-  where
-    newColor
-      | isBlack $ curColor w = White
-      | otherwise = Black
-
-
-
-quitWorld :: World -> World
-quitWorld w = w { exiting = True }
-
-
-skipTurn :: World -> World
-skipTurn w = w { curColor = switchColor w }
-
------------------- A few small useful functions -----------------------------
-
 -- Inserts a given character t times for every n characters provided in the string
 insertEveryN :: Int ->  Int -> Char -> [Char] -> [Char]
 insertEveryN 0 _ _ xs = xs
@@ -345,7 +359,6 @@ insertEveryN n t y xs
  | otherwise = take n xs ++ (concatMap (replicate t) [y]) ++ insertEveryN n t y (drop n xs)
 
 
-
 insertAt :: a -> Int -> [a] -> [a]
 insertAt newElement _ [] = [newElement]
 insertAt newElement i (a:as)
@@ -353,21 +366,12 @@ insertAt newElement i (a:as)
   | otherwise = a : insertAt newElement (i - 1) as
 
 
-fromJust :: Maybe Int -> Int
-fromJust (Just x) = x
-fromJust Nothing = -1
-
-
 -- Replacing an element in a list
 replace :: Int -> a -> [a] -> [a]
 replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
 
 
--- Takes a list of lists and returns the list where all the sublists are sorted
--- and are ordered from biggest sublist to smallest
-completeSort :: (Ord a) => [[a]] -> [[a]]
-completeSort li
-  | length li >= 1 = li
-  | ((sort $ head li) == head li) = sortBy (flip $ comparing length) li
-  | otherwise = completeSort $ insertAt (sort $ head li) (length li -1) (tail li)
+fromJust :: Maybe Int -> Int
+fromJust (Just x) = x
+fromJust Nothing = -1
 

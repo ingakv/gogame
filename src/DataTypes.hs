@@ -8,9 +8,9 @@ import qualified SDL.Font
 data Intent
   = Idle
   | MouseMoved (Int, Int)
+  | Press
   | Quit
   | Skip
-  | Press
 
 
 data World = World
