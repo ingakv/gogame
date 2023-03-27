@@ -8,7 +8,7 @@ import Data.Foldable          (foldl')
 
 import SDL.Font
 import Data.List.Split
-import Data.List        (intersect, elemIndex)
+import Data.List        (intersect, elemIndex, concat, nub, insert, partition)
 
 import DataTypes as DT
 
@@ -103,12 +103,13 @@ motionIntent e = (MouseMoved (fromIntegral x, fromIntegral y))
 
 
 buttonIntent :: SDL.MouseButtonEventData -> Intent
-buttonIntent e = t
+buttonIntent e = Press
   where
+{-
     t = if SDL.mouseButtonEventMotion e == SDL.Pressed
          then Press
          else Idle
-
+-}
 
 applyIntent :: Intent -> World -> World
 applyIntent Press       = pressWorld
@@ -153,7 +154,7 @@ pressWorld w = w2
   where
 
     w1 = updateMarkerPos (boardSize-1) (boardSize-1) w { board = newMap, curColor = newColor } [] []
-    w2 = updateGroups ((length $ whiteMarkerPos w)-1) ((length $ blackMarkerPos w)-1) w1 [] []
+    w2 = updateGroups (length $ whiteMarkerPos w) (length $ blackMarkerPos w) w1 [] []
 
     -- Function for replacing an element in a list
     replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
@@ -186,7 +187,7 @@ pressWorld w = w2
 
 updateMarkerPos :: Int -> Int -> World -> [(Int, Int)] -> [(Int, Int)] -> World
 updateMarkerPos x y w wli bli = do
-  if x >= 0
+  if x > 0
     then do
         if isWhite (((board w) !! x) !! y)
         then do updateMarkerPos (x-1) y w (insertAt (x,y) 0 $ wli) bli
@@ -203,16 +204,67 @@ updateMarkerPos x y w wli bli = do
 
 
 
+checkLeft :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+checkLeft m mPos = do
+  if elem left mPos then [left] else []
+  where
+      left = ((fst m-1), snd m)
 
-findGroups :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)] -> [(Int, Int)]
-findGroups m mPos li = do
-  if elem m li then li
-  else {-do
-    if elem a mPos then let newLi = findGroups a mPos (insertAt a 0 $ newLi) ; li = newLi
-    if elem b mPos then let newLi = findGroups b mPos (insertAt b 0 $ newLi) else li
-    if elem c mPos then let newLi = findGroups c mPos (insertAt c 0 $ newLi) else li
-    if elem d mPos then let newLi = findGroups d mPos (insertAt d 0 $ newLi) else li-}
-    li
+checkRight :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+checkRight m mPos = do
+  if elem right mPos then [right] else []
+  where
+      right = ((fst m+1), snd m)
+
+
+checkUp :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+checkUp m mPos = do
+  if elem up mPos then [up] else []
+  where
+      up = (fst m, (snd m+1))
+
+checkDown :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+checkDown m mPos = do
+  if elem down mPos then [down] else []
+  where
+      down = (fst m, (snd m-1))
+
+
+
+findGroups :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+findGroups m mPos = do
+  let nbors = (checkLeft m mPos) ++ (checkRight m mPos) ++ (checkUp m mPos) ++ (checkDown m mPos)
+  if length nbors > 0 then nbors
+  else [m]
+
+
+
+splitList :: [[(Int, Int)]] -> ([(Int, Int)], [(Int, Int)], Int, Int)
+splitList li = (singles, groups) (length singles) (length groups)
+  where
+    -- Divides the list into the singles and the groups
+    newLi = partition (part) li
+    part x = if x>1 then True else False
+
+    groups :: ([(Int, Int)])
+    groups = concat $ newLi !! 0
+
+    singles :: ([(Int, Int)])
+    singles = newLi !! 1
+
+
+
+weedOutSingles :: [(Int, Int)] -> [(Int, Int)] -> Int -> Int -> [(Int, Int)]
+weedOutSingles si gr x y = do
+  if x > 0
+  then do
+    let newList = if (si !! x) == (gr !! y) then map (filter(/=(si !! x))) gr else gr
+    weedOutSingles si newList (x-1) y
+
+  else weedOutSingles si gr (length si) (y-1)
+
+
+
 
 
 
@@ -224,28 +276,33 @@ updateGroups x y w wli bli = do
   if x > 0
   then do
     -- Find the potential group
-    let group = findGroups ((whiteMarkerPos w) !! x) (whiteMarkerPos w) []
+    let group = findGroups ((whiteMarkerPos w) !! (x-1)) (whiteMarkerPos w)
 
     -- Insert them into the array
-    let new = if length group > 0 then (insertAt group 0 $ wli) else wli
+    let new = splitList $ insert group wli
+    let newList = weedOutSingles (new !! 0) (new !! 1) (new !! 2) (new !! 3)
 
     -- Loops through each white marker
-    updateGroups (x-1) y w new bli
+    updateGroups (x-1) y w newList bli
 
 
   -- Repeat for the black markers
   else
     if y > 0
     then do
-      let group = findGroups ((blackMarkerPos w) !! x) (blackMarkerPos w) []
+      let group = findGroups ((blackMarkerPos w) !! (y-1)) (blackMarkerPos w)
 
-      let new = if length group > 0 then (insertAt group 0 $ bli) else bli
+      let new = splitList $ insert group bli
+      let newList = weedOutSingles (new !! 0) (new !! 1) (new !! 2) (new !! 3)
 
-
-      updateGroups x (y-1) w wli new
+      updateGroups x (y-1) w wli newList
 
     -- When all markers on the board have been checked, update these two world variables
-    else w { whiteGroups = wli, blackGroups = bli }
+    else do
+      let wli' = if length wli > 0 then nub(insert (concat wli) wli) else wli
+      let bli' = if length bli > 0 then nub(insert (concat bli) bli) else bli
+
+      w { whiteGroups = wli', blackGroups = bli' }
 
 
 

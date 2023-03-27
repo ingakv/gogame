@@ -112,8 +112,8 @@ drawWorld r t w = do
   drawText r (pack $ show $ blackMarkerPos w) (750,150)
 
 
-  drawText r "Press Q to Quit" (800,150)
-  drawText r "Press S to Skip turn" (800,200)
+  drawText r "Press Q to Quit" (800,250)
+  drawText r "Press S to Skip turn" (800,300)
 
   drawText r (pack $ show $ (length $ whiteGroups w)) (0,150)
 
@@ -123,7 +123,6 @@ drawWorld r t w = do
 
 
   where
-
 
     -- Checks if the mouse is hovering over a slot
     checkMouse :: IO ()
