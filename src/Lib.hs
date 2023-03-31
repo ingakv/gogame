@@ -5,11 +5,10 @@ module Lib where
 import qualified SDL
 
 import Data.Foldable          (foldl')
-
 import SDL.Font
 import Data.Ord               (comparing)
 import Data.List.Split        (chunksOf)
-import Data.List              (intersect, elemIndex, insert, sort, sortBy, delete, union, nub)
+import Data.List as DL        (intersect, elemIndex, insert, sort, sortBy, delete, union, nub, length, head, tail, filter)
 
 import DataTypes as DT
 
@@ -263,28 +262,22 @@ findGroups m mPos = do
 
 
 fixList :: [[(Int, Int)]] -> [[(Int, Int)]]
-fixList l = remDupSub li bigLi oneSmallerLi (length oneSmallerLi-1)
---  if length li > 1 then fixList $ tail li else do pure()
+fixList l = remDupSub li bigLi smallLi (DL.length smallLi -1)
   where
---    li = completeSort l
-    li = l
-    bigLi = head li
-    maxLen = length bigLi - 1
-    oneSmallerLi = filter (\x -> (length x == maxLen)) li
-
-
+    li = completeSort l
+    bigLi = DL.head li
+    smallLi = DL.tail li
 
 
 
 -- Removes sublists that consists solely on elements that can all be found in another list
 remDupSub :: [[(Int, Int)]] -> [(Int, Int)] -> [[(Int, Int)]] -> Int -> [[(Int, Int)]]
 remDupSub li bLi sLi x = do
-  if x > 0
+  if x >= 0
   then do
-    let newLi = if union (sLi !! x) bLi == bLi then (delete (sLi !! x) li) else li
+    let newLi = if sort (union (sLi !! x) bLi) == (sort bLi) then (delete (sLi !! x) li) else li
     remDupSub newLi bLi sLi (x-1)
   else li
-
 
 
 -- Updates the coherent groups on the board
@@ -318,10 +311,10 @@ updateGroups x y w wli bli = do
 -- Takes a list of lists and returns the list where all the sublists are sorted
 -- and are ordered from biggest sublist to smallest
 completeSort :: (Ord a) => [[a]] -> [[a]]
-completeSort li
-  | length li >= 1 = li
-  | ((sort $ head li) == head li) = sortBy (flip $ comparing length) li
-  | otherwise = completeSort $ insertAt (sort $ head li) (length li -1) (tail li)
+completeSort li = sortBy (flip $ comparing length) li
+
+--  | ((sort $ head li) == head li) = sortBy (flip $ comparing length) li
+--  | otherwise = completeSort $ insertAt (sort $ head li) (length li -1) (tail li)
 
 
 
