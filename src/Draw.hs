@@ -101,8 +101,6 @@ drawWorld r t w = do
   -- Hover marker
   checkMouse
 
-  drawText r w (pack $ show $ mouseCoords w) (0,250)
-
   where
     -- Checks if the mouse is hovering over a slot
     checkMouse :: IO ()
@@ -128,7 +126,7 @@ drawUI r w = do
   printNumbers Lib.boardSize $ 730
 
   drawText r w "White groups:" (0,0)
-  drawText r w (pack $ show $ whiteGroups w) (0,20)
+  drawText r w (pack $ show $ whiteGroups w) (0,25)
   drawText r w (pack $ show $ whiteMarkerPos w) (750,50)
   drawText r w "Black groups:" (0,100)
   drawText r w (pack $ show $ blackGroups w) (0,120)

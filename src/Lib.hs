@@ -9,7 +9,7 @@ import Data.Foldable          (foldl')
 import SDL.Font
 import Data.Ord               (comparing)
 import Data.List.Split        (chunksOf)
-import Data.List              (intersect, elemIndex, insert, sort, sortBy, delete, union)
+import Data.List              (intersect, elemIndex, insert, sort, sortBy, delete, union, nub)
 
 import DataTypes as DT
 
@@ -181,12 +181,9 @@ getPlacement x y
 -- Updates updateMarkerPos and updateGroups for every press
 pressWorld :: World -> World
 pressWorld w = w2
-
   where
-
     w1 = updateMarkerPos (boardSize-1) (boardSize-1) w { board = newMap, curColor = newColor } [] []
-    w2 = updateGroups (length $ whiteMarkerPos w) (length $ blackMarkerPos w) w1 [] []
-
+    w2 = updateGroups (length (whiteMarkerPos w)-1) (length (blackMarkerPos w)-1) w1 [] []
 
     -- Get the slot where the mouse is currently hovering over
     inters = intersect' w
@@ -226,8 +223,7 @@ updateMarkerPos x y w wli bli = do
           else updateMarkerPos (x-1) y w wli bli
   else
     if y > 0
-    then do
-      updateMarkerPos (boardSize-1) (y-1) w wli bli
+    then do updateMarkerPos (boardSize-1) (y-1) w wli bli
     else w { whiteMarkerPos = wli, blackMarkerPos = bli }
 
 
@@ -243,7 +239,6 @@ checkRight m mPos = do
   if elem right mPos then [right] else []
   where
       right = ((fst m+1), snd m)
-
 
 checkUp :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 checkUp m mPos = do
@@ -269,11 +264,15 @@ findGroups m mPos = do
 
 fixList :: [[(Int, Int)]] -> [[(Int, Int)]]
 fixList l = remDupSub li bigLi oneSmallerLi (length oneSmallerLi-1)
+--  if length li > 1 then fixList $ tail li else do pure()
   where
-    li = completeSort l
+--    li = completeSort l
+    li = l
     bigLi = head li
     maxLen = length bigLi - 1
     oneSmallerLi = filter (\x -> (length x == maxLen)) li
+
+
 
 
 
@@ -292,31 +291,26 @@ remDupSub li bLi sLi x = do
 updateGroups :: Int -> Int -> World -> [[(Int, Int)]] -> [[(Int, Int)]] -> World
 updateGroups x y w wli bli = do
   -- x is the amount of white markers currently on the board
-  if x > 0
+  if x >= 0
   then do
-
     -- Find the potential group
-    let group = findGroups ((whiteMarkerPos w) !! (x-1)) (whiteMarkerPos w)
-
+    let group = findGroups ((whiteMarkerPos w) !! x) (whiteMarkerPos w)
     -- Insert them into the array
     let new = fixList $ insert group wli
 
     -- Loops through each white marker
     updateGroups (x-1) y w new bli
 
-
   -- Repeat for the black markers
   else
-    if y > 0
+    if y >= 0
     then do
-      let group = findGroups ((blackMarkerPos w) !! (y-1)) (blackMarkerPos w)
-
+      let group = findGroups ((blackMarkerPos w) !! y) (blackMarkerPos w)
       let new = fixList $ insert group bli
-
       updateGroups x (y-1) w wli new
 
-    -- When all markers on the board have been checked, update these two world variables
-    else w { whiteGroups = wli, blackGroups = bli }
+    -- When all markers on the board have been checked, update these two world variables, and remove duplicates
+    else w { whiteGroups = (nub wli), blackGroups = (nub bli) }
 
 
 
