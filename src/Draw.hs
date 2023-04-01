@@ -7,6 +7,7 @@ module Draw (
 
 import DataTypes as DT
 import qualified Lib
+import qualified GameLogic as GL
 
 
 import qualified SDL
@@ -111,7 +112,7 @@ drawWorld r t w = do
       if (fst inters) >= 0
       then
         -- Draws the hover marker in the correct color
-        if Lib.isBlack $ curColor w
+        if GL.isBlack $ curColor w
           then do drawMarker r (t !! 5) (inters)
         else drawMarker r (t !! 4) (inters)
       else pure()
@@ -122,25 +123,29 @@ drawUI r w = do
 
   drawText r w letters (70, 15)
   drawText r w letters (70, (snd Lib.windowSize) - 50)
-  printNumbers Lib.boardSize 25
-  printNumbers Lib.boardSize $ 730
+  printNumbers GL.boardSize 25
+  printNumbers GL.boardSize $ 730
 
   drawText r w "Number of white groups" (800,200)
   drawText r w (pack $ show $ length $ whiteGroups w) (800,220)
   drawText r w "Number of black groups" (800,280)
   drawText r w (pack $ show $ length $ blackGroups w) (800,300)
 
+
+  if length (whiteFree w) > 0 then do drawText r w (pack $ show $ (whiteFree w) !! 0) (800,500) else pure()
+  drawText r w (pack $ show $ whiteFree w) (100,720)
+
   drawText r w "Press Q to Quit" (800,50)
   drawText r w "Press S to Skip turn" (800,100)
 
     where
     letters :: Text
-    letters = (pack $ Lib.insertEveryN 11 1 ' ' $ Lib.insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! Lib.boardSize)) ['A'..'Z'])
+    letters = (pack $ Lib.insertEveryN 11 1 ' ' $ Lib.insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! GL.boardSize)) ['A'..'Z'])
 
     printNumbers :: Int -> Int -> IO ()
     printNumbers n posx = do
       drawText r w (pack $ show n) (posx, 10+(35*n))
-      if elem n [2..Lib.boardSize]
+      if elem n [2..GL.boardSize]
        then do printNumbers (n-1) posx
       else pure()
 
@@ -158,7 +163,7 @@ horLine r n = do
     where
       x = fromIntegral $ 75 + n*35
       ay = 50
-      by = fromIntegral $ 60 + (Lib.boardSize-1)*35
+      by = fromIntegral $ 60 + (GL.boardSize-1)*35
 
 
 -- Vertical lines
@@ -167,21 +172,21 @@ verLine r n = do
   SDL.drawLine r (C.mkPoint ax y) (C.mkPoint bx y)
     where
       ax = 70
-      bx = fromIntegral $ 80 + (Lib.boardSize-1)*35
+      bx = fromIntegral $ 80 + (GL.boardSize-1)*35
       y = fromIntegral $ 55 + n*35
 
 -- Draw the lines where the markers are to be placed along
 drawLines' :: SDL.Renderer -> Int -> IO ()
 drawLines' r n = do
   horLine r n
-  if elem n [0..Lib.boardSize-2]
+  if elem n [0..GL.boardSize-2]
    then do  drawLines' r (n+1)
   else drawVerLines r 0
 
 drawVerLines :: SDL.Renderer -> Int -> IO ()
 drawVerLines r n = do
   verLine r n
-  if elem n [0..Lib.boardSize-2]
+  if elem n [0..GL.boardSize-2]
    then do  drawVerLines r (n+1)
   else pure()
 
@@ -189,16 +194,16 @@ drawVerLines r n = do
 -- Checks if a slot is empty, and draws a marker in that spot if it isn't
 checkBoard :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> Int -> Int -> IO ()
 checkBoard r tx w x y = do
-  if (Lib.isWhite ((board w !! x) !! y))
+  if (GL.isWhite ((board w !! x) !! y))
     then do drawMarker r (tx !! 0) (Lib.markerPos x y)
-  else if (Lib.isBlack ((board w !! x) !! y))
+  else if (GL.isBlack ((board w !! x) !! y))
     then do drawMarker r (tx !! 1) (Lib.markerPos x y)
   else pure()
 
-  if x < (Lib.boardSize-1)
+  if x < (GL.boardSize-1)
   then do
       checkBoard r tx w (x+1) y
-  else if y < (Lib.boardSize-1)
+  else if y < (GL.boardSize-1)
     then do
       checkBoard r tx w 0 (y+1)
     else pure()
@@ -211,7 +216,7 @@ drawBoard r (t, ti) = do
   where
     marginx = 70
     marginy = 50
-    s = fromIntegral (Lib.boardSize-1)*35 + 11
+    s = fromIntegral (GL.boardSize-1)*35 + 11
     boardTexture = (Just $ C.mkRect 0 0 (SDL.textureWidth ti) (SDL.textureHeight ti))
     board' = (Just $ C.mkRect marginx marginy s s)
 

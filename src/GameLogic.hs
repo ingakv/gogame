@@ -2,12 +2,61 @@
 
 module GameLogic (
   updateGroups
+, boardSize
+, isWhite
+, isBlack
+, isEmpty
+, replace
+, checkFree
 ) where
 
 import Data.Ord               (comparing)
-import Data.List as DL        (intersect, insert, sortBy, delete, union, nub, length)
+import Data.List as DL        (intersect, insert, sortBy, delete, union, nub, length, (\\))
 
 import DataTypes
+
+
+boardSize :: Int
+boardSize = 19
+
+
+-- Checks if a slot adjacent to a given slot is empty, and inserts it in the array if it is
+checkFree :: World -> Int -> Int -> World
+checkFree w x y = do
+  if x >= 0
+  then do
+    let bs = ((board w) !! x) !! y
+    let m = (x,y)
+    let s = (boardSize-1)
+    let b = [(u,v) | u <- [0..s], v <- [0..s]]
+
+    -- The slots on the board that are empty
+    let li = (b \\ (whiteMarkerPos w)) \\ (blackMarkerPos w)
+
+    -- Check if the slot is occupied by a white marker
+    if isWhite bs
+    then do
+
+      -- Uses the checkNbors function to find the empty slots around the given marker
+      let new = union (checkNbors m li) (whiteFree w)
+
+      checkFree w{whiteFree = new} (x-1) y
+
+    -- Repeat for if the slot is occupied by a black marker
+    else if isBlack bs
+    then do
+      let new = union (checkNbors m li) (blackFree w)
+      checkFree w{blackFree = new} (x-1) y
+
+    else checkFree w (x-1) y
+
+  else if y > 0
+    then do
+      checkFree w (boardSize-1) (y-1)
+    else w
+
+
+
 
 
 -- Joins groups together and sorts them
@@ -33,13 +82,6 @@ joinGroups x li = do
 
 
 
-checkLeft :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
-checkLeft m mPos
-  | (elem left mPos) = [left]
-  | otherwise = []
-  where
-      left = ((fst m-1), snd m)
-
 
 
 
@@ -48,6 +90,12 @@ checkNbors :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 checkNbors m mPos = (checkLeft m mPos) ++ (checkRight m mPos) ++ (checkUp m mPos) ++ (checkDown m mPos)
 
 
+checkLeft :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+checkLeft m mPos
+  | (elem left mPos) = [left]
+  | otherwise = []
+  where
+      left = ((fst m-1), snd m)
 
 checkRight :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 checkRight m mPos
@@ -55,6 +103,7 @@ checkRight m mPos
   | otherwise = []
   where
       right = ((fst m+1), snd m)
+
 
 
 checkUp :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
@@ -113,4 +162,23 @@ completeSort :: [[a]] -> [[a]]
 completeSort li = sortBy (flip $ comparing DL.length) li
 --  | ((sort $ head li) == head li) = sortBy (flip $ comparing DL.length) li
 --  | otherwise = completeSort $ insertAt (sort $ head li) (DL.length li -1) (tail li)
+
+-- Checks the color of a given slot
+isWhite :: Slot -> Bool
+isWhite White = True
+isWhite _ = False
+
+isBlack :: Slot -> Bool
+isBlack Black = True
+isBlack _ = False
+
+isEmpty :: Slot -> Bool
+isEmpty Empty = True
+isEmpty _ = False
+
+
+-- Replacing an element in a list
+replace :: Int -> a -> [a] -> [a]
+replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
+
 

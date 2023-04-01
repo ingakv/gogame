@@ -25,6 +25,8 @@ data World = World
   , blackMarkerPos :: [(Int, Int)]
   , whiteGroups :: [[(Int, Int)]]
   , blackGroups :: [[(Int, Int)]]
+  , whiteFree :: [(Int, Int)]
+  , blackFree :: [(Int, Int)]
   }
 
 
