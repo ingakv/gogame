@@ -171,19 +171,14 @@ getPlacement x y
 pressWorld :: World -> World
 pressWorld w = w2
   where
-    w1 = updateMarkerPos (boardSize-1) (boardSize-1) w { board = newMap, curColor = newColor } [] []
-    w2 = w1 { whiteGroups = (fst newWorld), blackGroups = (snd newWorld) }
-
-    -- Marker positions, with visited = False
-    wm = (whiteMarkerPos w)
-    bm = (blackMarkerPos w)
+    w1 = updateMarkerPos s s w { board = newMap, curColor = newColor } [] []
+    w2 = updateGroups lw lb w1 [] []
 
     -- Amount of markers (-1)
     lw = length (whiteMarkerPos w)-1
     lb = length (blackMarkerPos w)-1
 
-    -- Apply the updateGroups function
-    newWorld = updateGroups lw lb wm bm [] []
+    s = boardSize-1
 
     -- Get the slot where the mouse is currently hovering over
     inters = intersect' w
@@ -292,30 +287,30 @@ findGroups m mPos = do
 
 
 -- Updates the coherent groups on the board
-updateGroups :: Int -> Int -> [(Int, Int)] -> [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]] -> ([[(Int, Int)]] , [[(Int, Int)]])
-updateGroups x y wm bm wli bli = do
+updateGroups :: Int -> Int -> World -> [[(Int, Int)]] -> [[(Int, Int)]] -> World
+updateGroups x y w wli bli = do
   -- x is the amount of white markers currently on the board
   if x >= 0
   then do
     -- Find the potential group
-    let group = findGroups (wm !! x) wm
+    let group = findGroups ((whiteMarkerPos w) !! x) (whiteMarkerPos w)
 
     -- Insert them into the array
     let new = fixList $ insert group wli
 
     -- Loops through each white marker
-    updateGroups (x-1) y wm bm new bli
+    updateGroups (x-1) y w new bli
 
   -- Repeat for the black markers
   else
     if y >= 0
     then do
-      let group = findGroups (bm !! y) bm
+      let group = findGroups ((blackMarkerPos w) !! y) (blackMarkerPos w)
       let new = fixList $ insert group bli
-      updateGroups x (y-1) wm bm wli new
+      updateGroups x (y-1) w wli new
 
     -- When all markers on the board have been checked, return these two world variables, and remove duplicates
-    else  ((nub wli), (nub bli))
+    else w { whiteGroups = (nub wli), blackGroups = (nub bli) }
 
 
 
