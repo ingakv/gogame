@@ -132,8 +132,8 @@ drawUI r w = do
   drawText r w (pack $ show $ length $ blackGroups w) (800,300)
 
 
-  if length (whiteFree w) > 0 then do drawText r w (pack $ show $ (whiteFree w) !! 0) (800,500) else pure()
-  drawText r w (pack $ show $ whiteFree w) (100,720)
+  drawText r w (pack $ show $ whiteFree w) (100,710)
+  drawText r w (pack $ show $ blackFree w) (100,730)
 
   drawText r w "Press Q to Quit" (800,50)
   drawText r w "Press S to Skip turn" (800,100)

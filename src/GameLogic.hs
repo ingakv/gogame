@@ -26,9 +26,7 @@ checkFree w x y = do
   if x >= 0
   then do
     let bs = ((board w) !! x) !! y
-    let m = (x,y)
-    let s = (boardSize-1)
-    let b = [(u,v) | u <- [0..s], v <- [0..s]]
+    let b = [(u,v) | u <- [0..(boardSize-1)], v <- [0..(boardSize-1)]]
 
     -- The slots on the board that are empty
     let li = (b \\ (whiteMarkerPos w)) \\ (blackMarkerPos w)
@@ -38,14 +36,14 @@ checkFree w x y = do
     then do
 
       -- Uses the checkNbors function to find the empty slots around the given marker
-      let new = union (checkNbors m li) (whiteFree w)
+      let new = union (checkNbors (x,y) li) (whiteFree w)
 
       checkFree w{whiteFree = new} (x-1) y
 
     -- Repeat for if the slot is occupied by a black marker
     else if isBlack bs
     then do
-      let new = union (checkNbors m li) (blackFree w)
+      let new = union (checkNbors (x,y) li) (blackFree w)
       checkFree w{blackFree = new} (x-1) y
 
     else checkFree w (x-1) y
