@@ -42,7 +42,6 @@ markerPos :: Int -> Int -> (Int, Int)
 markerPos x y = (65 + 35*x, 45 + 35*y)
 
 
-
 -- An array of all marker positions
 allMarkerPos :: Int -> Int -> Int -> [(Int, Int)] -> [(Int, Int)]
 allMarkerPos x y s li = do
@@ -54,7 +53,6 @@ allMarkerPos x y s li = do
       allMarkerPos s (y-1) s li
     else
       li
-
 
 
 
@@ -177,8 +175,8 @@ pressWorld w = w2
     w2 = w1 { whiteGroups = (fst newWorld), blackGroups = (snd newWorld) }
 
     -- Marker positions, with visited = False
-    wm = runRN (whiteMarkerPos w)
-    bm = runRN (blackMarkerPos w)
+    wm = (whiteMarkerPos w)
+    bm = (blackMarkerPos w)
 
     -- Amount of markers (-1)
     lw = length (whiteMarkerPos w)-1
@@ -230,13 +228,11 @@ updateMarkerPos x y w wli bli = do
 
 
 
-
 fixList :: [[(Int, Int)]] -> [[(Int, Int)]]
 fixList l = joinGroups x li
   where
     li = completeSort l
     x = (length li -1)
-
 
 
 
@@ -253,74 +249,56 @@ joinGroups x li = do
   else li
 
 
--- Function for an easier way to call the resetNbors function
-runRN :: [(Int, Int)] -> [((Int, Int), Bool)]
-runRN arr = resetNbors arr ((DL.length arr) -1) []
-
--- Converts the array of markers into an array ready to go through neighbor checking
-resetNbors :: [(Int, Int)] -> Int -> [((Int, Int), Bool)] -> [((Int, Int), Bool)]
-resetNbors m x li = do
-  if x >= 0
-  then do
-      resetNbors m (x-1) (insertAt ((m !! x), False) 0 li)
-  else li
-
-
-
-checkLeft :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
-checkLeft (m, visited) mPos
-  | (elem left mPos) && not visited = [left'] ++ (checkNbors left' mPos)
+checkLeft :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+checkLeft m mPos
+  | (elem left mPos) = [left]
   | otherwise = []
   where
       left = ((fst m-1), snd m)
-      left' = (left, True)
 
 
-checkRight :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
-checkRight (m, visited) mPos
-  | (elem right mPos) && not visited = [right'] ++ (checkNbors right' mPos)
+checkRight :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+checkRight m mPos
+  | (elem right mPos) = [right]
   | otherwise = []
   where
       right = ((fst m+1), snd m)
-      right' = (right, True)
 
 
-checkUp :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
-checkUp (m, visited) mPos
-  | (elem up mPos) && not visited = [up'] ++ (checkNbors up' mPos)
+checkUp :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+checkUp m mPos
+  | (elem up mPos) = [up]
   | otherwise = []
   where
       up = (fst m, (snd m-1))
-      up' = (up, True)
 
-checkDown :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
-checkDown (m, visited) mPos
-  | (elem down mPos) && not visited = [down'] ++ (checkNbors down' mPos)
+checkDown :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+checkDown m mPos
+  | (elem down mPos) = [down]
   | otherwise = []
   where
       down = (fst m, (snd m+1))
-      down' = (down, True)
 
 
-checkNbors :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
+checkNbors :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 checkNbors m mPos = (checkLeft m mPos) ++ (checkRight m mPos) ++ (checkUp m mPos) ++ (checkDown m mPos)
 
 
-findGroups :: ((Int, Int), Bool) -> [(Int, Int)] -> [(Int, Int)]
-findGroups (m,v) mPos = do
-   let nbors = checkNbors (m,v) mPos
-   if length nbors > 0 then insert m (getn nbors) else [m]
+findGroups :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
+findGroups m mPos = do
+   let nbors = checkNbors m mPos
+   if length nbors > 0 then insert m nbors else [m]
 
 
 
 -- Updates the coherent groups on the board
-updateGroups :: Int -> Int -> [((Int, Int), Bool)] -> [((Int, Int), Bool)] -> [[(Int, Int)]] -> [[(Int, Int)]] -> ([[(Int, Int)]] , [[(Int, Int)]])
+updateGroups :: Int -> Int -> [(Int, Int)] -> [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]] -> ([[(Int, Int)]] , [[(Int, Int)]])
 updateGroups x y wm bm wli bli = do
   -- x is the amount of white markers currently on the board
   if x >= 0
   then do
     -- Find the potential group
-    let group = findGroups (wm !! x) $ getn wm
+    let group = findGroups (wm !! x) wm
 
     -- Insert them into the array
     let new = fixList $ insert group wli
@@ -332,7 +310,7 @@ updateGroups x y wm bm wli bli = do
   else
     if y >= 0
     then do
-      let group = findGroups (bm !! y) $ getn bm
+      let group = findGroups (bm !! y) bm
       let new = fixList $ insert group bli
       updateGroups x (y-1) wm bm wli new
 
