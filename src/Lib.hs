@@ -8,7 +8,7 @@ import Data.Foldable          (foldl')
 import SDL.Font
 import Data.Ord               (comparing)
 import Data.List.Split        (chunksOf)
-import Data.List as DL        (intersect, elemIndex, insert, sort, sortBy, delete, union, nub, length, head, tail)
+import Data.List as DL        (intersect, elemIndex, insert, sortBy, delete, union, nub, length)
 
 import DataTypes as DT
 
@@ -169,13 +169,23 @@ getPlacement x y
   | otherwise = getPlacement (x+1) (y-boardSize)
 
 
-
--- Updates updateMarkerPos and updateGroups for every press
+-- Updates updateMarkerPos and updateGroups for every press of the mouse
 pressWorld :: World -> World
 pressWorld w = w2
   where
     w1 = updateMarkerPos (boardSize-1) (boardSize-1) w { board = newMap, curColor = newColor } [] []
-    w2 = runUG w1
+    w2 = w1 { whiteGroups = (fst newWorld), blackGroups = (snd newWorld) }
+
+    -- Marker positions, with visited = False
+    wm = runRN (whiteMarkerPos w)
+    bm = runRN (blackMarkerPos w)
+
+    -- Amount of markers (-1)
+    lw = length (whiteMarkerPos w)-1
+    lb = length (blackMarkerPos w)-1
+
+    -- Apply the updateGroups function
+    newWorld = updateGroups lw lb wm bm [] []
 
     -- Get the slot where the mouse is currently hovering over
     inters = intersect' w
@@ -222,22 +232,26 @@ updateMarkerPos x y w wli bli = do
 
 
 fixList :: [[(Int, Int)]] -> [[(Int, Int)]]
-fixList l = remDupSub li bigLi smallLi (DL.length smallLi -1)
+fixList l = joinGroups x li
   where
     li = completeSort l
-    bigLi = DL.head li
-    smallLi = DL.tail li
+    x = (length li -1)
 
 
 
--- Removes sublists that consists solely on elements that can all be found in another list
-remDupSub :: [[(Int, Int)]] -> [(Int, Int)] -> [[(Int, Int)]] -> Int -> [[(Int, Int)]]
-remDupSub li bLi sLi x = do
-  if x >= 0
+
+joinGroups :: Int -> [[(Int, Int)]] -> [[(Int, Int)]]
+joinGroups x li = do
+  if x > 0
   then do
-    let newLi = if sort (union (sLi !! x) bLi) == (sort bLi) then (delete (sLi !! x) li) else li
-    remDupSub newLi bLi sLi (x-1)
+    let s = (li !! x)
+    let t = (li !! (x-1))
+    let newLi = if length (intersect s t) > 0 then insert (union s t) (delete s $ delete t li) else li
+
+    joinGroups (x-1) newLi
+
   else li
+
 
 -- Function for an easier way to call the resetNbors function
 runRN :: [(Int, Int)] -> [((Int, Int), Bool)]
@@ -253,33 +267,36 @@ resetNbors m x li = do
 
 
 
-
 checkLeft :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
-checkLeft (m, visited) mPos = do
-  if (elem left mPos) && not visited then [left'] ++ (checkNbors left' mPos) else []
+checkLeft (m, visited) mPos
+  | (elem left mPos) && not visited = [left'] ++ (checkNbors left' mPos)
+  | otherwise = []
   where
       left = ((fst m-1), snd m)
       left' = (left, True)
 
 
 checkRight :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
-checkRight (m, visited) mPos = do
-  if (elem right mPos) && not visited then [right'] ++ (checkNbors right' mPos) else []
+checkRight (m, visited) mPos
+  | (elem right mPos) && not visited = [right'] ++ (checkNbors right' mPos)
+  | otherwise = []
   where
       right = ((fst m+1), snd m)
       right' = (right, True)
 
 
 checkUp :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
-checkUp (m, visited) mPos = do
-  if (elem up mPos) && not visited then [up'] ++ (checkNbors up' mPos) else []
+checkUp (m, visited) mPos
+  | (elem up mPos) && not visited = [up'] ++ (checkNbors up' mPos)
+  | otherwise = []
   where
       up = (fst m, (snd m-1))
       up' = (up, True)
 
 checkDown :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
-checkDown (m, visited) mPos = do
-  if (elem down mPos) && not visited then [down'] ++ (checkNbors down' mPos) else []
+checkDown (m, visited) mPos
+  | (elem down mPos) && not visited = [down'] ++ (checkNbors down' mPos)
+  | otherwise = []
   where
       down = (fst m, (snd m+1))
       down' = (down, True)
@@ -294,17 +311,6 @@ findGroups (m,v) mPos = do
    let nbors = checkNbors (m,v) mPos
    if length nbors > 0 then insert m (getn nbors) else [m]
 
-
-
--- Function for running the next function more clearly
-runUG :: World -> World
-runUG w = w { whiteGroups = (fst newWorld), blackGroups = (snd newWorld) }
-  where
-    wm = runRN (whiteMarkerPos w)
-    bm = runRN (blackMarkerPos w)
-    lw = length (whiteMarkerPos w)-1
-    lb = length (blackMarkerPos w)-1
-    newWorld = updateGroups lw lb wm bm [] []
 
 
 -- Updates the coherent groups on the board
