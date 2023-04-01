@@ -256,7 +256,7 @@ resetNbors m x li = do
 
 checkLeft :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
 checkLeft (m, visited) mPos = do
-  if (elem left mPos) && (visited == False) then [left'] ++ (checkNbors left' mPos) else []
+  if (elem left mPos) && not visited then [left'] ++ (checkNbors left' mPos) else []
   where
       left = ((fst m-1), snd m)
       left' = (left, True)
@@ -264,7 +264,7 @@ checkLeft (m, visited) mPos = do
 
 checkRight :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
 checkRight (m, visited) mPos = do
-  if (elem right mPos) && (visited == False) then [right'] ++ (checkNbors right' mPos) else []
+  if (elem right mPos) && not visited then [right'] ++ (checkNbors right' mPos) else []
   where
       right = ((fst m+1), snd m)
       right' = (right, True)
@@ -272,14 +272,14 @@ checkRight (m, visited) mPos = do
 
 checkUp :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
 checkUp (m, visited) mPos = do
-  if (elem up mPos) && (visited == False) then [up'] ++ (checkNbors up' mPos) else []
+  if (elem up mPos) && not visited then [up'] ++ (checkNbors up' mPos) else []
   where
       up = (fst m, (snd m-1))
       up' = (up, True)
 
 checkDown :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
 checkDown (m, visited) mPos = do
-  if (elem down mPos) && (visited == False) then [down'] ++ (checkNbors down' mPos) else []
+  if (elem down mPos) && not visited then [down'] ++ (checkNbors down' mPos) else []
   where
       down = (fst m, (snd m+1))
       down' = (down, True)
