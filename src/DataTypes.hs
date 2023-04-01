@@ -15,7 +15,7 @@ data Intent
 
 data World = World
   { exiting :: Bool
-  , mouseCoords   :: (Int, Int)
+  , mouseCoords :: (Int, Int)
   , board :: [[Slot]]
   , textures :: [(SDL.Texture, SDL.TextureInfo)]
   , font :: SDL.Font.Font

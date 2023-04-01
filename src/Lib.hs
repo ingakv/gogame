@@ -261,6 +261,15 @@ findGroups m mPos = do
 
 
 
+
+resetNbors :: [(Int, Int)] -> Int -> [((Int, Int), Bool)] -> [((Int, Int), Bool)]
+resetNbors m x li = do
+  if x >= 0
+  then do
+      resetNbors m (x-1) (insertAt ((m !! x), False) 0 li)
+  else li
+
+
 fixList :: [[(Int, Int)]] -> [[(Int, Int)]]
 fixList l = remDupSub li bigLi smallLi (DL.length smallLi -1)
   where
@@ -280,14 +289,40 @@ remDupSub li bLi sLi x = do
   else li
 
 
+checkNbors :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
+checkNbors m mPos = checkDown2 m mPos
+-- (checkLeft m mPos) ++ (checkRight m mPos) ++ (checkUp m mPos) ++ (checkDown m mPos)
+
+
+checkDown2 :: ((Int, Int), Bool) -> [(Int, Int)] -> [((Int, Int), Bool)]
+checkDown2 (m, visited) mPos = do
+  if (elem down mPos) && (visited == False) then checkNbors (down, True) mPos else []
+  where
+      down = (fst m, (snd m-1))
+
+
+findGroups2 :: ((Int, Int), Bool) -> [(Int, Int)] -> [(Int, Int)]
+findGroups2 (m,v) mPos = do
+   let nbors = checkNbors (m,v) mPos
+   if length nbors > 0 then insert m (getn nbors) else [m]
+
+
+getn :: [((Int, Int), Bool)] -> [(Int, Int)]
+getn ((pos,visited):xs) = [pos] ++ getn xs
+
+
 -- Updates the coherent groups on the board
 updateGroups :: Int -> Int -> World -> [[(Int, Int)]] -> [[(Int, Int)]] -> World
 updateGroups x y w wli bli = do
+  let neww = resetNbors (whiteMarkerPos w) ((length (whiteMarkerPos w)) -1) []
   -- x is the amount of white markers currently on the board
   if x >= 0
   then do
     -- Find the potential group
-    let group = findGroups ((whiteMarkerPos w) !! x) (whiteMarkerPos w)
+
+    let group = findGroups2 ((neww) !! x) (whiteMarkerPos w)
+--    let group = findGroups ((whiteMarkerPos w) !! x) (whiteMarkerPos w)
+
     -- Insert them into the array
     let new = fixList $ insert group wli
 

@@ -125,15 +125,11 @@ drawUI r w = do
   printNumbers Lib.boardSize 25
   printNumbers Lib.boardSize $ 730
 
-  drawText r w "White groups:" (0,0)
-  drawText r w (pack $ show $ whiteGroups w) (0,25)
-  drawText r w (pack $ show $ whiteMarkerPos w) (750,50)
-  drawText r w "Black groups:" (0,100)
-  drawText r w (pack $ show $ blackGroups w) (0,120)
-  drawText r w (pack $ show $ blackMarkerPos w) (750,120)
+  drawText r w (pack $ show $ whiteGroups w) (20,715)
+  drawText r w (pack $ show $ blackGroups w) (20,730)
 
-  drawText r w "Press Q to Quit" (800,250)
-  drawText r w "Press S to Skip turn" (800,300)
+  drawText r w "Press Q to Quit" (800,50)
+  drawText r w "Press S to Skip turn" (800,100)
 
     where
     letters :: Text
