@@ -11,6 +11,7 @@ import Data.List.Split        (chunksOf)
 import Data.List as DL        (intersect, elemIndex, insert, sortBy, delete, union, nub, length)
 
 import DataTypes as DT
+import GameRules
 
 
 windowSize :: (Int, Int)
@@ -144,7 +145,7 @@ intersect' w = inter
     inters = intersect [ (x,y) | x <- lix, y <- liy ] $ allSlotPos w
 
     inter =
-      if (length inters) > 0
+      if (DL.length inters) > 0
       then inters !! 0
       else (-1,-1)
 
@@ -175,8 +176,8 @@ pressWorld w = w2
     w2 = updateGroups lw lb w1 [] []
 
     -- Amount of markers (-1)
-    lw = length (whiteMarkerPos w)-1
-    lb = length (blackMarkerPos w)-1
+    lw = DL.length (whiteMarkerPos w)-1
+    lb = DL.length (blackMarkerPos w)-1
 
     s = boardSize-1
 
@@ -227,7 +228,7 @@ fixList :: [[(Int, Int)]] -> [[(Int, Int)]]
 fixList l = joinGroups x li
   where
     li = completeSort l
-    x = (length li -1)
+    x = (DL.length li -1)
 
 
 
@@ -237,7 +238,7 @@ joinGroups x li = do
   then do
     let s = (li !! x)
     let t = (li !! (x-1))
-    let newLi = if length (intersect s t) > 0 then insert (union s t) (delete s $ delete t li) else li
+    let newLi = if DL.length (intersect s t) > 0 then insert (union s t) (delete s $ delete t li) else li
 
     joinGroups (x-1) newLi
 
@@ -282,7 +283,7 @@ checkNbors m mPos = (checkLeft m mPos) ++ (checkRight m mPos) ++ (checkUp m mPos
 findGroups :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 findGroups m mPos = do
    let nbors = checkNbors m mPos
-   if length nbors > 0 then insert m nbors else [m]
+   if DL.length nbors > 0 then insert m nbors else [m]
 
 
 
@@ -318,9 +319,9 @@ updateGroups x y w wli bli = do
 -- Takes a list of lists and returns the list where all the sublists are sorted
 -- and are ordered from biggest sublist to smallest
 completeSort :: [[a]] -> [[a]]
-completeSort li = sortBy (flip $ comparing length) li
---  | ((sort $ head li) == head li) = sortBy (flip $ comparing length) li
---  | otherwise = completeSort $ insertAt (sort $ head li) (length li -1) (tail li)
+completeSort li = sortBy (flip $ comparing DL.length) li
+--  | ((sort $ head li) == head li) = sortBy (flip $ comparing DL.length) li
+--  | otherwise = completeSort $ insertAt (sort $ head li) (DL.length li -1) (tail li)
 
 
 
@@ -347,7 +348,7 @@ insertEveryN :: Int ->  Int -> Char -> [Char] -> [Char]
 insertEveryN 0 _ _ xs = xs
 insertEveryN _ _ _ [] = []
 insertEveryN n t y xs
- | length xs < n = xs
+ | DL.length xs < n = xs
  | t < 1 = xs
  | otherwise = take n xs ++ (concatMap (replicate t) [y]) ++ insertEveryN n t y (drop n xs)
 
@@ -369,9 +370,4 @@ fromJust :: Maybe Int -> Int
 fromJust (Just x) = x
 fromJust Nothing = -1
 
-
--- Extracts the position from the tuple
-getn :: [(a, b)] -> [a]
-getn [] = []
-getn ((pos,_):xs) = [pos] ++ getn xs
 

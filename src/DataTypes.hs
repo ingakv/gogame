@@ -16,13 +16,13 @@ data Intent
 data World = World
   { exiting :: Bool
   , mouseCoords :: (Int, Int)
-  , board :: [[Slot]]
   , textures :: [(SDL.Texture, SDL.TextureInfo)]
+  , curColor :: Slot
   , font :: SDL.Font.Font
+  , board :: [[Slot]]
   , allSlotPos :: [(Int, Int)]
   , whiteMarkerPos :: [(Int, Int)]
   , blackMarkerPos :: [(Int, Int)]
-  , curColor :: Slot
   , whiteGroups :: [[(Int, Int)]]
   , blackGroups :: [[(Int, Int)]]
   }
