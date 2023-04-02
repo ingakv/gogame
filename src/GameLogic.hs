@@ -7,6 +7,7 @@ module GameLogic (
 , isBlack
 , isEmpty
 , replace
+, replaceBoard
 , checkFree
 , insertAt
 , fromJust
@@ -29,6 +30,7 @@ checkFree w x y = do
   if x >= 0
   then do
     let bs = ((board w) !! x) !! y
+--    let bs = whiteGroups w !! x
     let b = [(u,v) | u <- [0..(boardSize-1)], v <- [0..(boardSize-1)]]
 
     -- The slots on the board that are empty
@@ -36,23 +38,26 @@ checkFree w x y = do
 
     -- Uses the checkNbors function to find the empty slots around the given marker
     let freeGr = checkNbors (x,y) li
+--    let freeGr = concat [checkNbors a li | a <- bs]
+
 
     -- Check if the slot is occupied by a white marker
     if isWhite bs
     then do
       -- If the group's degree of freedom is 0, the stone gets captured
-      let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (whiteMarkerPos w) , replace x (replace y Empty (board w !! x)) $ board w) else (whiteMarkerPos w , board w)
-
+      let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (whiteMarkerPos w) , replaceBoard w x y Black) else (whiteMarkerPos w , board w)
+--    let capture = if length freeGr == 0 then (deleteGroup w bs $ (length bs)-1) else w
       -- Adds it to the array
       let new = union freeGr (whiteFree w)
 
       -- Updates the world
       checkFree w{whiteFree = new , whiteMarkerPos = capture , board = newBoard} (x-1) y
 
+--    checkFree' capture{whiteFree = new} (x-1)
     -- Repeat for if the slot is occupied by a black marker
     else if isBlack bs
     then do
-      let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (blackMarkerPos w) , replace x (replace y Empty (board w !! x)) $ board w) else (blackMarkerPos w , board w)
+      let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (blackMarkerPos w) , replaceBoard w x y Empty) else (blackMarkerPos w , board w)
       let new = union freeGr (blackFree w)
       checkFree w{blackFree = new , blackMarkerPos = capture , board = newBoard} (x-1) y
 
@@ -64,6 +69,13 @@ checkFree w x y = do
     else w
 
 
+
+deleteGroup :: World -> [(Int, Int)] -> Int -> World
+deleteGroup w gr x
+  | x < 0 = w
+  | gr == [] = w
+  | otherwise = deleteGroup w{board = newBoard} gr (x-1)
+  where newBoard = replaceBoard w (snd (gr !! x)) (fst (gr !! x)) Black
 
 
 -- Joins groups together and sorts them
@@ -191,6 +203,9 @@ replace :: Int -> a -> [a] -> [a]
 replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
 
 
+-- Replaces a slot on the board
+replaceBoard :: World -> Int -> Int -> Slot -> [[Slot]]
+replaceBoard w y x s = replace y (replace x s (board w !! y)) $ board w
 
 
 -- Inserts a given character t times for every n characters provided in the string

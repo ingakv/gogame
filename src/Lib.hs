@@ -177,9 +177,12 @@ getPlacement x y
 pressWorld :: World -> World
 pressWorld w = w3
   where
-    w1 = updateMarkerPos s s w { board = newMap, curColor = newColor } [] []
+    w1 = updateMarkerPos s s w { board = newMap, curColor = newColor , whiteFree = [] , blackFree = [] } [] []
     w2 = updateGroups lw lb w1 [] []
-    w3 = checkFree w2{whiteFree = [] , blackFree = []} (boardSize-1) (boardSize-1)
+    w3 = checkFree w2 (boardSize-1) (boardSize-1)
+--    w3 = checkFree' w2 $ length (whiteGroups w)-1
+
+
 
     -- Amount of markers (-1)
     lw = DL.length (whiteMarkerPos w)-1
@@ -200,11 +203,9 @@ pressWorld w = w3
         -- Checks if the slot is already occupied
         if isEmpty ((board w !! snd index) !! fst index)
         then do
-          -- Replace the slot with the new one
-          let newRow = replace (fst index) (curColor w) ((board w) !! (snd index))
+          -- Replace the slot with the new one and switch the active color
+          (replaceBoard w (snd index) (fst index) (curColor w) , switchColor w)
 
-          -- Switch the active color
-          (replace (snd index) newRow (board w), switchColor w)
 
         else (board w, curColor w)
 

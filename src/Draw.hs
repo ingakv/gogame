@@ -139,7 +139,7 @@ drawUI r w = do
   drawText r w (pack $ show $ length $ blackFree w) (p3x+80,p1y)
 
 
-  drawText r w (pack $ show $ blackFree w) (80,720)
+  drawText r w (pack $ show $ whiteFree w) (80,720)
 
 
 
