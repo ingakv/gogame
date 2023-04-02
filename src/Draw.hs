@@ -126,28 +126,46 @@ drawUI r w = do
   printNumbers GL.boardSize 25
   printNumbers GL.boardSize $ 730
 
-  drawText r w "Number of white groups" (800,200)
-  drawText r w (pack $ show $ length $ whiteGroups w) (800,220)
-  drawText r w "Number of black groups" (800,280)
-  drawText r w (pack $ show $ length $ blackGroups w) (800,300)
 
 
-  drawText r w (pack $ show $ whiteFree w) (100,710)
-  drawText r w (pack $ show $ blackFree w) (100,730)
+  drawText r w "White" (p2x,p2y)
+  drawText r w (pack $ show $ length $ whiteGroups w) (p3x,p3y)
+  drawText r w (pack $ show $ length $ whiteFree w) (p3x,p1y)
+
+  drawText r w "Black" (p2x+80,p2y)
+  drawText r w (pack $ show $ length $ blackGroups w) (p3x+80,p3y)
+  drawText r w (pack $ show $ length $ blackFree w) (p3x+80,p1y)
+
+  drawText r w "Number of" (p1x,p3y-8)
+  drawText r w "groups" (p1x+10,p3y+7)
+
+  drawText r w "Degree of" (p1x,p1y-8)
+  drawText r w "freedom" (p1x+2,p1y+7)
+
 
   drawText r w "Press Q to Quit" (800,50)
   drawText r w "Press S to Skip turn" (800,100)
 
     where
-    letters :: Text
-    letters = (pack $ Lib.insertEveryN 11 1 ' ' $ Lib.insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! GL.boardSize)) ['A'..'Z'])
+      p1x = 750
+      p1y = p2y+100
 
-    printNumbers :: Int -> Int -> IO ()
-    printNumbers n posx = do
-      drawText r w (pack $ show n) (posx, 10+(35*n))
-      if elem n [2..GL.boardSize]
-       then do printNumbers (n-1) posx
-      else pure()
+      p2x = p1x+100
+      p2y = 180
+
+      p3x = p2x+10
+      p3y = p2y+35
+      
+
+      letters :: Text
+      letters = (pack $ GL.insertEveryN 11 1 ' ' $ GL.insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! GL.boardSize)) ['A'..'Z'])
+
+      printNumbers :: Int -> Int -> IO ()
+      printNumbers n posx = do
+        drawText r w (pack $ show n) (posx, 10+(35*n))
+        if elem n [2..GL.boardSize]
+         then do printNumbers (n-1) posx
+        else pure()
 
 
 

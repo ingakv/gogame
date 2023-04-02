@@ -8,6 +8,9 @@ module GameLogic (
 , isEmpty
 , replace
 , checkFree
+, insertAt
+, fromJust
+, insertEveryN
 ) where
 
 import Data.Ord               (comparing)
@@ -34,8 +37,8 @@ checkFree w x y = do
     -- Check if the slot is occupied by a white marker
     if isWhite bs
     then do
-
       -- Uses the checkNbors function to find the empty slots around the given marker
+      -- and adds it to the array
       let new = union (checkNbors (x,y) li) (whiteFree w)
 
       checkFree w{whiteFree = new} (x-1) y
@@ -52,7 +55,6 @@ checkFree w x y = do
     then do
       checkFree w (boardSize-1) (y-1)
     else w
-
 
 
 
@@ -77,8 +79,6 @@ joinGroups x li = do
     joinGroups (x-1) newLi
 
   else li
-
-
 
 
 
@@ -119,7 +119,7 @@ checkDown m mPos
       down = (fst m, (snd m+1))
 
 
-
+-- Finds connecting groups of markers (that are in an '+' shape)
 findGroups :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 findGroups m mPos = do
    let nbors = checkNbors m mPos
@@ -130,13 +130,13 @@ findGroups m mPos = do
 -- Updates the coherent groups on the board
 updateGroups :: Int -> Int -> World -> [[(Int, Int)]] -> [[(Int, Int)]] -> World
 updateGroups x y w wli bli = do
-  -- x is the amount of white markers currently on the board
+  -- x is the amount of white markers currently on the board, y is the amount of black markers
   if x >= 0
   then do
     -- Find the potential group
     let group = findGroups ((whiteMarkerPos w) !! x) (whiteMarkerPos w)
 
-    -- Insert them into the array
+    -- Insert it into the array
     let new = fixList $ insert group wli
 
     -- Loops through each white marker
@@ -161,6 +161,10 @@ completeSort li = sortBy (flip $ comparing DL.length) li
 --  | ((sort $ head li) == head li) = sortBy (flip $ comparing DL.length) li
 --  | otherwise = completeSort $ insertAt (sort $ head li) (DL.length li -1) (tail li)
 
+
+
+------------------ A few small useful functions -----------------------------
+
 -- Checks the color of a given slot
 isWhite :: Slot -> Bool
 isWhite White = True
@@ -179,4 +183,29 @@ isEmpty _ = False
 replace :: Int -> a -> [a] -> [a]
 replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
 
+
+
+
+-- Inserts a given character t times for every n characters provided in the string
+insertEveryN :: Int ->  Int -> Char -> [Char] -> [Char]
+insertEveryN 0 _ _ xs = xs
+insertEveryN _ _ _ [] = []
+insertEveryN n t y xs
+ | DL.length xs < n = xs
+ | t < 1 = xs
+ | otherwise = take n xs ++ (concatMap (replicate t) [y]) ++ insertEveryN n t y (drop n xs)
+
+
+-- Inserts an element at a given location
+insertAt :: a -> Int -> [a] -> [a]
+insertAt newElement _ [] = [newElement]
+insertAt newElement i (a:as)
+  | i <= 0 = newElement:a:as
+  | otherwise = a : insertAt newElement (i - 1) as
+
+
+
+fromJust :: Maybe Int -> Int
+fromJust (Just x) = x
+fromJust Nothing = -1
 

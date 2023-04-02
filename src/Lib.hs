@@ -2,7 +2,6 @@
 
 module Lib (
   markerPos
-, insertEveryN
 , windowSize
 , intersect'
 , textColor
@@ -228,35 +227,5 @@ updateMarkerPos x y w wli bli = do
     if y > 0
     then do updateMarkerPos (boardSize-1) (y-1) w wli bli
     else w { whiteMarkerPos = wli, blackMarkerPos = bli }
-
-
-
-
------------------- A few small useful functions -----------------------------
-
-
-
--- Inserts a given character t times for every n characters provided in the string
-insertEveryN :: Int ->  Int -> Char -> [Char] -> [Char]
-insertEveryN 0 _ _ xs = xs
-insertEveryN _ _ _ [] = []
-insertEveryN n t y xs
- | DL.length xs < n = xs
- | t < 1 = xs
- | otherwise = take n xs ++ (concatMap (replicate t) [y]) ++ insertEveryN n t y (drop n xs)
-
-
--- Inserts an element at a given location
-insertAt :: a -> Int -> [a] -> [a]
-insertAt newElement _ [] = [newElement]
-insertAt newElement i (a:as)
-  | i <= 0 = newElement:a:as
-  | otherwise = a : insertAt newElement (i - 1) as
-
-
-
-fromJust :: Maybe Int -> Int
-fromJust (Just x) = x
-fromJust Nothing = -1
 
 
