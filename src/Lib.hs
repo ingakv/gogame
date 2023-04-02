@@ -178,15 +178,9 @@ pressWorld :: World -> World
 pressWorld w = w3
   where
     w1 = updateMarkerPos s s w { board = newMap, curColor = newColor , whiteFree = [] , blackFree = [] } [] []
-    w2 = updateGroups lw lb w1 [] []
-    w3 = checkFree w2 (boardSize-1) (boardSize-1)
---    w3 = checkFree' w2 $ length (whiteGroups w)-1
+    w2 = updateGroups 0 0 w1 [] []
+    w3 = checkFree w2 0 0
 
-
-
-    -- Amount of markers (-1)
-    lw = DL.length (whiteMarkerPos w)-1
-    lb = DL.length (blackMarkerPos w)-1
 
     s = boardSize-1
 
@@ -204,7 +198,7 @@ pressWorld w = w3
         if isEmpty ((board w !! snd index) !! fst index)
         then do
           -- Replace the slot with the new one and switch the active color
-          (replaceBoard w (snd index) (fst index) (curColor w) , switchColor w)
+          (replaceBoard w index (curColor w) , switchColor w)
 
 
         else (board w, curColor w)

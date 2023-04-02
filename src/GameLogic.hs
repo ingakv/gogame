@@ -27,47 +27,49 @@ boardSize = 19
 -- Checks if a slot adjacent to a given slot is empty, and inserts it in the array if it is
 checkFree :: World -> Int -> Int -> World
 checkFree w x y = do
-  if x >= 0
+
+  let b = [(u,v) | u <- [0..(boardSize-1)], v <- [0..(boardSize-1)]]
+
+
+
+  -- Check if the slot is occupied by a white marker
+  if x < (length $ whiteGroups w)
   then do
-    let bs = ((board w) !! x) !! y
---    let bs = whiteGroups w !! x
-    let b = [(u,v) | u <- [0..(boardSize-1)], v <- [0..(boardSize-1)]]
+
+    let bs = whiteGroups w !! x
 
     -- The slots on the board that are empty
     let li = (b \\ (whiteMarkerPos w)) \\ (blackMarkerPos w)
 
     -- Uses the checkNbors function to find the empty slots around the given marker
-    let freeGr = checkNbors (x,y) li
---    let freeGr = concat [checkNbors a li | a <- bs]
+    let freeGr = concat [checkNbors a li | a <- bs]
+
+    -- If the group's degree of freedom is 0, the stone gets captured
+    let (newPos , newWorld) = if length freeGr == 0 then ((whiteMarkerPos w) \\ bs , deleteGroup w bs $ (length bs)-1) else (whiteMarkerPos w , w)
 
 
-    -- Check if the slot is occupied by a white marker
-    if isWhite bs
-    then do
-      -- If the group's degree of freedom is 0, the stone gets captured
-      let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (whiteMarkerPos w) , replaceBoard w x y Black) else (whiteMarkerPos w , board w)
---    let capture = if length freeGr == 0 then (deleteGroup w bs $ (length bs)-1) else w
-      -- Adds it to the array
-      let new = union freeGr (whiteFree w)
+    -- Adds it to the array
+    let new = union freeGr (whiteFree w)
 
-      -- Updates the world
-      checkFree w{whiteFree = new , whiteMarkerPos = capture , board = newBoard} (x-1) y
+    -- Updates the world
+    checkFree newWorld{ whiteMarkerPos = newPos , whiteFree = new } (x+1) y
 
---    checkFree' capture{whiteFree = new} (x-1)
+
     -- Repeat for if the slot is occupied by a black marker
-    else if isBlack bs
-    then do
-      let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (blackMarkerPos w) , replaceBoard w x y Empty) else (blackMarkerPos w , board w)
-      let new = union freeGr (blackFree w)
-      checkFree w{blackFree = new , blackMarkerPos = capture , board = newBoard} (x-1) y
+  else w {-if y < (length $ blackGroups w)
+  then do
 
-    else checkFree w (x-1) y
+    let bs = blackGroups w !! x
 
-  else if y > 0
-    then do
-      checkFree w (boardSize-1) (y-1)
-    else w
+    -- Uses the checkNbors function to find the empty slots around the given marker
+    let freeGr = concat [checkNbors a li | a <- bs]
 
+    let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (blackMarkerPos w) , replaceBoard w x y Empty) else (blackMarkerPos w , board w)
+    let new = union freeGr (blackFree w)
+    checkFree w{blackFree = new , blackMarkerPos = capture , board = newBoard} x (y+1)
+
+  else w
+-}
 
 
 deleteGroup :: World -> [(Int, Int)] -> Int -> World
@@ -75,7 +77,7 @@ deleteGroup w gr x
   | x < 0 = w
   | gr == [] = w
   | otherwise = deleteGroup w{board = newBoard} gr (x-1)
-  where newBoard = replaceBoard w (snd (gr !! x)) (fst (gr !! x)) Black
+  where newBoard = replaceBoard w (snd (gr !! x) , fst (gr !! x)) Empty
 
 
 -- Joins groups together and sorts them
@@ -146,11 +148,12 @@ findGroups m mPos = do
 
 
 
+
 -- Updates the coherent groups on the board
 updateGroups :: Int -> Int -> World -> [[(Int, Int)]] -> [[(Int, Int)]] -> World
 updateGroups x y w wli bli = do
   -- x is the amount of white markers currently on the board, y is the amount of black markers
-  if x >= 0
+  if x < DL.length (whiteMarkerPos w)
   then do
     -- Find the potential group
     let group = findGroups ((whiteMarkerPos w) !! x) (whiteMarkerPos w)
@@ -159,15 +162,15 @@ updateGroups x y w wli bli = do
     let new = fixList $ insert group wli
 
     -- Loops through each white marker
-    updateGroups (x-1) y w new bli
+    updateGroups (x+1) y w new bli
 
   -- Repeat for the black markers
   else
-    if y >= 0
+    if y < DL.length (blackMarkerPos w)
     then do
       let group = findGroups ((blackMarkerPos w) !! y) (blackMarkerPos w)
       let new = fixList $ insert group bli
-      updateGroups x (y-1) w wli new
+      updateGroups x (y+1) w wli new
 
     -- When all markers on the board have been checked, return these two world variables, and remove duplicates
     else w { whiteGroups = (nub wli), blackGroups = (nub bli) }
@@ -204,8 +207,8 @@ replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
 
 
 -- Replaces a slot on the board
-replaceBoard :: World -> Int -> Int -> Slot -> [[Slot]]
-replaceBoard w y x s = replace y (replace x s (board w !! y)) $ board w
+replaceBoard :: World -> (Int , Int) -> Slot -> [[Slot]]
+replaceBoard w (x,y) s = replace y (replace x s (board w !! y)) $ board w
 
 
 -- Inserts a given character t times for every n characters provided in the string
