@@ -46,13 +46,14 @@ checkFree w x y = do
       -- Adds it to the array
       let new = union freeGr (whiteFree w)
 
+      -- Updates the world
       checkFree w{whiteFree = new , whiteMarkerPos = capture , board = newBoard} (x-1) y
 
     -- Repeat for if the slot is occupied by a black marker
     else if isBlack bs
     then do
-      let new = union freeGr (blackFree w)
       let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (blackMarkerPos w) , replace x (replace y Empty (board w !! x)) $ board w) else (blackMarkerPos w , board w)
+      let new = union freeGr (blackFree w)
       checkFree w{blackFree = new , blackMarkerPos = capture , board = newBoard} (x-1) y
 
     else checkFree w (x-1) y
