@@ -34,20 +34,26 @@ checkFree w x y = do
     -- The slots on the board that are empty
     let li = (b \\ (whiteMarkerPos w)) \\ (blackMarkerPos w)
 
+    -- Uses the checkNbors function to find the empty slots around the given marker
+    let freeGr = checkNbors (x,y) li
+
     -- Check if the slot is occupied by a white marker
     if isWhite bs
     then do
-      -- Uses the checkNbors function to find the empty slots around the given marker
-      -- and adds it to the array
-      let new = union (checkNbors (x,y) li) (whiteFree w)
+      -- If the group's degree of freedom is 0, the stone gets captured
+      let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (whiteMarkerPos w) , replace x (replace y Empty (board w !! x)) $ board w) else (whiteMarkerPos w , board w)
 
-      checkFree w{whiteFree = new} (x-1) y
+      -- Adds it to the array
+      let new = union freeGr (whiteFree w)
+
+      checkFree w{whiteFree = new , whiteMarkerPos = capture , board = newBoard} (x-1) y
 
     -- Repeat for if the slot is occupied by a black marker
     else if isBlack bs
     then do
-      let new = union (checkNbors (x,y) li) (blackFree w)
-      checkFree w{blackFree = new} (x-1) y
+      let new = union freeGr (blackFree w)
+      let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (blackMarkerPos w) , replace x (replace y Empty (board w !! x)) $ board w) else (blackMarkerPos w , board w)
+      checkFree w{blackFree = new , blackMarkerPos = capture , board = newBoard} (x-1) y
 
     else checkFree w (x-1) y
 

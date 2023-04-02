@@ -91,12 +91,12 @@ drawWorld r t w = do
 
   drawBoard r (t !! 1)
 
-  drawLines' r 0
+  drawLines r 0
 
   -- Draws the markers currently on the board
   checkBoard r [t!!2,t!!3] w 0 0
 
-  -- Lines
+  -- Text
   drawUI r w
 
   -- Hover marker
@@ -126,6 +126,8 @@ drawUI r w = do
   printNumbers GL.boardSize 25
   printNumbers GL.boardSize $ 730
 
+  SDL.rendererDrawColor r SDL.$= SDL.V4 125 155 155 255
+  SDL.drawLine r (C.mkPoint p4x $ fromIntegral p3y-10) (C.mkPoint p4x $ fromIntegral p1y+25)
 
 
   drawText r w "White" (p2x,p2y)
@@ -135,6 +137,11 @@ drawUI r w = do
   drawText r w "Black" (p2x+80,p2y)
   drawText r w (pack $ show $ length $ blackGroups w) (p3x+80,p3y)
   drawText r w (pack $ show $ length $ blackFree w) (p3x+80,p1y)
+
+
+  drawText r w (pack $ show $ blackFree w) (80,720)
+
+
 
   drawText r w "Number of" (p1x,p3y-8)
   drawText r w "groups" (p1x+10,p3y+7)
@@ -155,6 +162,8 @@ drawUI r w = do
 
       p3x = p2x+10
       p3y = p2y+35
+
+      p4x = fromIntegral (fst Lib.windowSize)-252
       
 
       letters :: Text
@@ -177,6 +186,8 @@ drawUI r w = do
 -- Horisontal lines
 horLine :: SDL.Renderer -> Int -> IO ()
 horLine r n = do
+
+  SDL.rendererDrawColor r SDL.$= SDL.V4 0 0 0 255
   SDL.drawLine r (C.mkPoint x ay) (C.mkPoint x by)
     where
       x = fromIntegral $ 75 + n*35
@@ -194,11 +205,11 @@ verLine r n = do
       y = fromIntegral $ 55 + n*35
 
 -- Draw the lines where the markers are to be placed along
-drawLines' :: SDL.Renderer -> Int -> IO ()
-drawLines' r n = do
+drawLines :: SDL.Renderer -> Int -> IO ()
+drawLines r n = do
   horLine r n
   if elem n [0..GL.boardSize-2]
-   then do  drawLines' r (n+1)
+   then do  drawLines r (n+1)
   else drawVerLines r 0
 
 drawVerLines :: SDL.Renderer -> Int -> IO ()
