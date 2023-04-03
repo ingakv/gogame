@@ -23,8 +23,8 @@ import SDL.Font
 -- Main entry to our application logic. It takes the handle to the SDL Window,
 -- sets everything Empty and executes the main application loop: handle user inputs,
 -- and draw the world.
-mainApp :: SDL.Window -> IO ()
-mainApp w =
+mainApp :: [[Slot]] -> SDL.Window -> IO ()
+mainApp b w =
     C.withRenderer w $ \r -> do
 
       -- Loading the tetures
@@ -47,7 +47,7 @@ mainApp w =
         (\xw ->
              SDL.pollEvents >>= (\xw' -> xw' <$ doRender xw') . Lib.updateWorld xw
         )
-        (Lib.initialWorld t f)
+        (Lib.initialWorld t f b)
 
       -- when we are done with the renderer, we need to clean up
       Draw.destroyTextures t
@@ -137,9 +137,6 @@ drawUI r w = do
   drawText r w "Black" (p2x+80,p2y)
   drawText r w (pack $ show $ length $ blackGroups w) (p3x+80,p3y)
   drawText r w (pack $ show $ length $ blackFree w) (p3x+80,p1y)
-
-
-  drawText r w (pack $ show $ whiteFree w) (80,720)
 
 
 

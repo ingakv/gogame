@@ -5,6 +5,7 @@ module Lib (
 , windowSize
 , intersect'
 , textColor
+, initBoard
 , initialWorld
 , updateWorld
 ) where
@@ -60,10 +61,10 @@ allMarkerPos x y li = do
 
 
 
-initialWorld :: [(SDL.Texture, SDL.TextureInfo)] -> Font -> World
-initialWorld tx f = World
+initialWorld :: [(SDL.Texture, SDL.TextureInfo)] -> Font -> [[Slot]] -> World
+initialWorld tx f b = World
   { exiting = False
-  , board = initBoard boardSize boardSize []
+  , board = b
   , mouseCoords = (0,0)
   , textures = tx
   , font = f

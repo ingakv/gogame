@@ -28,8 +28,11 @@ boardSize = 19
 checkFree :: World -> Int -> Int -> World
 checkFree w x y = do
 
+  -- All slots / intersections on the board
   let b = [(u,v) | u <- [0..(boardSize-1)], v <- [0..(boardSize-1)]]
 
+  -- The slots on the board that are empty
+  let li = (b \\ (whiteMarkerPos w)) \\ (blackMarkerPos w)
 
 
   -- Check if the slot is occupied by a white marker
@@ -37,9 +40,6 @@ checkFree w x y = do
   then do
 
     let bs = whiteGroups w !! x
-
-    -- The slots on the board that are empty
-    let li = (b \\ (whiteMarkerPos w)) \\ (blackMarkerPos w)
 
     -- Uses the checkNbors function to find the empty slots around the given marker
     let freeGr = concat [checkNbors a li | a <- bs]
@@ -56,20 +56,20 @@ checkFree w x y = do
 
 
     -- Repeat for if the slot is occupied by a black marker
-  else w {-if y < (length $ blackGroups w)
-  then do
+  else
+    if y < (length $ blackGroups w)
+    then do
+      let bs = blackGroups w !! y
 
-    let bs = blackGroups w !! x
+      let freeGr = concat [checkNbors a li | a <- bs]
 
-    -- Uses the checkNbors function to find the empty slots around the given marker
-    let freeGr = concat [checkNbors a li | a <- bs]
+      let (newPos , newWorld) = if length freeGr == 0 then ((blackMarkerPos w) \\ bs , deleteGroup w bs $ (length bs)-1) else (blackMarkerPos w , w)
 
-    let (capture , newBoard) = if length freeGr == 0 then (delete (x,y) (blackMarkerPos w) , replaceBoard w x y Empty) else (blackMarkerPos w , board w)
-    let new = union freeGr (blackFree w)
-    checkFree w{blackFree = new , blackMarkerPos = capture , board = newBoard} x (y+1)
+      let new = union freeGr (blackFree w)
 
-  else w
--}
+      checkFree newWorld{ blackMarkerPos = newPos , blackFree = new } x (y+1)
+
+    else w
 
 
 deleteGroup :: World -> [(Int, Int)] -> Int -> World
