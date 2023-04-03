@@ -27,7 +27,7 @@ mainApp :: [[Slot]] -> SDL.Window -> IO ()
 mainApp b w =
     C.withRenderer w $ \r -> do
 
-      -- Loading the tetures
+      -- Loading the textures
       t1 <- C.loadTextureWithInfo r "./assets/background.png"
       t2 <- C.loadTextureWithInfo r "./assets/wood.png"
       t3 <- C.loadTextureWithInfo r "./assets/white_marker.png"
@@ -36,9 +36,11 @@ mainApp b w =
       t6 <- C.loadTextureWithInfo r "./assets/black_marker_hover.png"
 
       let t = [t1,t2,t3,t4,t5,t6]
+
+      -- Loading the fonts
       f <- SDL.Font.load "./ttf/roboto/Roboto-Regular.ttf" 14
 
-      -- we create an utility curry for us here
+
       let doRender = Draw.renderWorld r
 
 
@@ -87,10 +89,14 @@ drawText r world t (x, y) = do
 -- The actual method for drawing that is used by the rendering method above.
 drawWorld :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
 drawWorld r t w = do
+
+  -- The background
   drawBackground r (t !! 0) Lib.windowSize
 
+  -- The wooden board
   drawBoard r (t !! 1)
 
+  -- The lines on the board
   drawLines r 0
 
   -- Draws the markers currently on the board
@@ -109,6 +115,7 @@ drawWorld r t w = do
 
       let inters = Lib.intersect' w
 
+      -- If it is hovering over a slot, it does the following
       if (fst inters) >= 0
       then
         -- Draws the hover marker in the correct color
@@ -121,14 +128,16 @@ drawWorld r t w = do
 drawUI :: SDL.Renderer -> World -> IO ()
 drawUI r w = do
 
+  -- The letters and numbers along the edge of the board
   drawText r w letters (70, 15)
   drawText r w letters (70, (snd Lib.windowSize) - 50)
   printNumbers GL.boardSize 25
   printNumbers GL.boardSize $ 730
 
+
+  -- The visual for seeing basic info about the current state of the board
   SDL.rendererDrawColor r SDL.$= SDL.V4 125 155 155 255
   SDL.drawLine r (C.mkPoint p4x $ fromIntegral p3y-10) (C.mkPoint p4x $ fromIntegral p1y+25)
-
 
   drawText r w "White" (p2x,p2y)
   drawText r w (pack $ show $ length $ whiteGroups w) (p3x,p3y)
@@ -147,11 +156,13 @@ drawUI r w = do
   drawText r w "freedom" (p1x+2,p1y+7)
 
 
+  -- The descriptions of the shortcuts
   drawText r w "Press Q to Quit" (800,50)
   drawText r w "Press S to Skip turn" (800,100)
   drawText r w "Press C to Clear the board" (800,150)
 
     where
+      -- Text placement coordinates
       p1x = 750
       p1y = p2y+100
 
@@ -177,9 +188,7 @@ drawUI r w = do
 
 
 
-
-
--- Draws a line between two points that are computed based on the number n:
+-- Draws a line between two points that are computed based on the number n
 
 -- Horisontal lines
 horLine :: SDL.Renderer -> Int -> IO ()
@@ -202,6 +211,7 @@ verLine r n = do
       bx = fromIntegral $ 80 + (GL.boardSize-1)*35
       y = fromIntegral $ 55 + n*35
 
+
 -- Draw the lines where the markers are to be placed along
 drawLines :: SDL.Renderer -> Int -> IO ()
 drawLines r n = do
@@ -218,15 +228,18 @@ drawVerLines r n = do
   else pure()
 
 
--- Checks if a slot is empty, and draws a marker in that spot if it isn't
+-- Checks if a slot is empty, and draws a stone in that spot if it isn't
 checkBoard :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> Int -> Int -> IO ()
 checkBoard r tx w x y = do
+
+  -- Draws the stone in the correct color
   if (GL.isWhite ((board w !! x) !! y))
     then do drawMarker r (tx !! 0) (Lib.markerPos x y)
   else if (GL.isBlack ((board w !! x) !! y))
     then do drawMarker r (tx !! 1) (Lib.markerPos x y)
   else pure()
 
+  -- Loops through the entire board and recursively draws all of the stones
   if x < (GL.boardSize-1)
   then do
       checkBoard r tx w (x+1) y
@@ -249,7 +262,7 @@ drawBoard r (t, ti) = do
 
 
 
--- Draw a singular marker with texture
+-- Draw a singular stone with texture
 drawMarker :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> (Int, Int) -> IO ()
 drawMarker r (t, ti) (px, py) = do
   SDL.copy r t markerTexture marker
@@ -262,15 +275,14 @@ drawMarker r (t, ti) (px, py) = do
 
 
 
-
--- The actual method for drawing that is used by the rendering method above.
+-- Draw the background
 drawBackground :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> (Int, Int) -> IO ()
 drawBackground r (t, ti) (winWidth, winHeight) = do
-  -- Get the size of the texture, and we scale it Empty for a better effect
+
   let texHeight = SDL.textureHeight ti
   let texWidth = SDL.textureWidth ti
 
-  -- Loop and draw the tiled texture
+
   let loop x y
           | y >= winHeight = return ()
           | x >= winWidth = loop 0 (y + fromIntegral texHeight)

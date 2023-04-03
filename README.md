@@ -23,6 +23,7 @@
 * Which player / color that is active alternates each time a stone is placed
 * A stone cannot be placed on top of another stone
 * A stone can only be placed within the board
+* Self-capture / suicide is not possible
 * When hovering over an available intersection, a semi-transparent marker with the correct color will be shown.
 * UI using SDL2, including
   * Textures
@@ -37,20 +38,20 @@
 * Starts an empty board on startup
 * Skips turn by pressing 's'
 * Quits the application when pressing 'q'
+* Clear the board by pressing 'c'
+* Can load board states from a SGF file, however the format of this file is not up to standard, and does instead only consist of an array of 'E's, 'W's and 'B's, which stands for Empty, White and Black
 
 
 
-```
 
 
  **Not implemented features**
 
-* Self-capture is not checked and is allowed
-* Ko is not checked and a infinite loop of capture and recapture is possible
-* Can NOT read from already generated games, have to manually input each move
+* Ko is not implemented and a infinite loop of capture and recapture is possible
+* Reading from SGF file is not done the "correct" way
+* Can not save a game / board to SGF file
 
 
-```
 
 
 
@@ -66,24 +67,25 @@
 
 ## Assessment specification
 
-* ```
-  * An assessment specification for validation and verification of the assignment, taking into account all of the above points. (as a report: **Assessment Specification**)
-  * 
-  * I will look at the methods of capture (if any), as well as the complexity of the functions (are they more complicated than neccassary?)
-  * What features are implemented, and to what degree.
-  * Assessing whether or not the program runs optimally (lag/memory problems)
-  * Checking for glitches/crashes, how preventable?
-  ```
+* 
+
+* I will look at the methods of capture (if any), as well as the complexity of the functions (are they more complicated than neccassary?)
+
+* What features are implemented, and to what degree.
+
+* Assessing whether or not the program runs optimally (lag/memory problems)
+
+* Checking for glitches/crashes, how preventable?
 
   
 
 
 
-A self-assessment following the above assessment specification. (as a report: **Self-Assessment**)
-
 ## Self Assessment
 
 **Functional Assesment**
+
+A self-assessment following the above assessment specification. (as a report: **Self-Assessment**)
 
 
 
@@ -96,21 +98,18 @@ A self-assessment following the above assessment specification. (as a report: **
 
 
 
-## Assignment 1
 
-* Submission Deadline: **April 6, 23:59**
-* Submission must be done through [the submission system](http://10.212.175.82)
-   - http://10.212.175.82
-   - Hash: `cg49jme8eh9dbc0db0sg`
+
+
+
+
+
+
 
 ## Important
-* For generic professionalism requirements refer to [the Course Wiki page](https://git.gvk.idi.ntnu.no/course/prog2006/prog2006-2023/-/wikis/home#assignments)
-* Initial [specification discussion has been recorded in the class as video](https://youtu.be/PTospJzUtF0).
 * Make the merge request against THIS repo. Do not add your own project on top of the existing project, instead, extend the project by the structure that already exists and modify the required files.
 
-## Notes
 
-* **Bonus for `>C`** Write a functions that returns `True` if two board states are isomorphic. Use translation, rotation, and symmetry operations for isomorphism tests. We assume a stones and groups must maintain the exact freedom degree counts. Or, in other words, given two SGF files with a board state only, the program checks if the two games are the same (isomorphic for translation, rotation and symmetry).
 
 
 

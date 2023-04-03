@@ -60,24 +60,22 @@ allMarkerPos x y li = do
       li
 
 
-
 initialWorld :: [(SDL.Texture, SDL.TextureInfo)] -> Font -> [[Slot]] -> World
 initialWorld tx f b = World
   { exiting = False
-  , board = b
   , mouseCoords = (0,0)
   , textures = tx
   , font = f
+  , board = b
+  , curColor = Black
   , allSlotPos = allMarkerPos (boardSize-1) (boardSize-1) []
   , whiteMarkerPos = []
   , blackMarkerPos = []
-  , curColor = Black
   , whiteGroups = []
   , blackGroups = []
   , whiteFree = []
   , blackFree = []
   }
-
 
 
 
@@ -147,7 +145,7 @@ intersect' w = inter
     a = fst $ mouseCoords w
     b = snd $ mouseCoords w
 
-    -- Creates two lists consisting of all of the coordinates within 20 points of the mouse
+    -- Creates two lists consisting of all of the coordinates within 20 pixels of the mouse
     lix = [(a-20) .. (a)]
     liy = [(b-20) .. (b)]
 
@@ -156,12 +154,13 @@ intersect' w = inter
     inters = intersect [ (x,y) | x <- lix, y <- liy ] $ allSlotPos w
 
     inter =
+      -- If it is hovering over a slot, return the position
       if (DL.length inters) > 0
       then inters !! 0
       else (-1,-1)
 
 
-
+-- Swaps the active player
 switchColor :: World -> Slot
 switchColor w = newColor
   where
@@ -179,7 +178,7 @@ getPlacement x y
   | otherwise = getPlacement (x+1) (y-boardSize)
 
 
--- Updates updateMarkerPos and updateGroups for every press of the mouse
+-- Updates updateMarkerPos, updateGroups and checkFree every time the mouse button is pressed
 pressWorld :: World -> World
 pressWorld w = w3
   where
@@ -189,6 +188,7 @@ pressWorld w = w3
 
 
     s = boardSize-1
+
 
     -- Get the slot where the mouse is currently hovering over
     inters = intersect' w
@@ -206,21 +206,22 @@ pressWorld w = w3
           -- Replace the slot with the new one and switch the active color
           (replaceBoard w index (curColor w) , switchColor w)
 
-
         else (board w, curColor w)
 
       else (board w, curColor w)
 
 
-
+-- Updates the positions of the markers
 updateMarkerPos :: Int -> Int -> World -> [(Int, Int)] -> [(Int, Int)] -> World
 updateMarkerPos x y w wli bli = do
   if x > 0
     then do
+        -- Inserts all the white markers into a list
         if isWhite (((board w) !! x) !! y)
         then do updateMarkerPos (x-1) y w (insertAt (x,y) 0 $ wli) bli
 
         else
+          -- Repeats for all of the black markers
           if isBlack (((board w) !! x) !! y)
           then do updateMarkerPos (x-1) y w wli (insertAt (x,y) 0 $ bli)
           else updateMarkerPos (x-1) y w wli bli

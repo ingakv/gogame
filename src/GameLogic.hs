@@ -72,6 +72,7 @@ checkFree w x y = do
     else w
 
 
+-- Deletes and entire group of markers
 deleteGroup :: World -> [(Int, Int)] -> Int -> World
 deleteGroup w gr x
   | x < 0 = w
@@ -124,7 +125,6 @@ checkRight m mPos
       right = ((fst m+1), snd m)
 
 
-
 checkUp :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 checkUp m mPos
   | (elem up mPos) = [up]
@@ -140,13 +140,11 @@ checkDown m mPos
       down = (fst m, (snd m+1))
 
 
--- Finds connecting groups of markers (that are in an '+' shape)
+-- Finds connecting groups of markers that are in a '+' shape
 findGroups :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 findGroups m mPos = do
    let nbors = checkNbors m mPos
    if DL.length nbors > 0 then insert m nbors else [m]
-
-
 
 
 -- Updates the coherent groups on the board
@@ -180,8 +178,6 @@ updateGroups x y w wli bli = do
 -- and are ordered from biggest sublist to smallest
 completeSort :: [[a]] -> [[a]]
 completeSort li = sortBy (flip $ comparing DL.length) li
---  | ((sort $ head li) == head li) = sortBy (flip $ comparing DL.length) li
---  | otherwise = completeSort $ insertAt (sort $ head li) (DL.length li -1) (tail li)
 
 
 
@@ -228,9 +224,7 @@ insertAt newElement i (a:as)
   | i <= 0 = newElement:a:as
   | otherwise = a : insertAt newElement (i - 1) as
 
-
-
+-- Converts from Just Int to Int
 fromJust :: Maybe Int -> Int
 fromJust (Just x) = x
 fromJust Nothing = -1
-
