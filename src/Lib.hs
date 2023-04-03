@@ -179,8 +179,8 @@ pressWorld :: World -> World
 pressWorld w = w3
   where
     w1 = updateMarkerPos s s w { board = newMap, curColor = newColor , whiteFree = [] , blackFree = [] } [] []
-    w2 = updateGroups 0 0 w1 [] []
-    w3 = checkFree w2 0 0
+    w2 = checkFree w1 0 0
+    w3 = updateGroups 0 0 w2 [] []
 
 
     s = boardSize-1
