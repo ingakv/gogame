@@ -1,0 +1,16 @@
+Test suite gogame-test: RUNNING...
+
+Testing GameLogic module
+  isEmpty
+    works for if it is Empty [v]
+  replace
+    works for 2 5 [1,2,3] [v]
+  insertEveryN
+    works for 3 2 'x' Hello world [v]
+  insertAt
+    works for 9 1 [1,2,3] [v]
+
+Finished in 0.0054 seconds
+4 examples, 0 failures
+Test suite gogame-test: PASS
+Test suite logged to: C:\Users\Inga\Desktop\Programmering\Assignment1_prog\dist-newstyle\build\x86_64-windows\ghc-9.2.5\gogame-0.1.0.0\t\gogame-test\test\gogame-0.1.0.0-gogame-test.log

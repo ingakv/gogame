@@ -71,4 +71,5 @@ test-suite gogame-test
     , doctest
     , gogame
     , hspec
+    , QuickCheck
   default-language: Haskell2010
