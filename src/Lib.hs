@@ -92,6 +92,7 @@ payloadToIntent :: SDL.EventPayload -> Intent
 payloadToIntent SDL.QuitEvent            = Quit -- window CLOSE pressed
 payloadToIntent (SDL.KeyboardEvent e)    = -- When Q is pressed, quit also
   if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeQ then Quit else
+  if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeC then Clear else
   if (SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeS)
    && (SDL.keyboardEventKeyMotion e == SDL.Pressed)
    then Skip else Idle
@@ -125,6 +126,9 @@ quitWorld w = w { exiting = True }
 skipTurn :: World -> World
 skipTurn w = w { curColor = switchColor w }
 
+clearBoard :: World -> World
+clearBoard w = w { board = initBoard boardSize boardSize [] }
+
 
 
 applyIntent :: Intent -> World -> World
@@ -133,6 +137,7 @@ applyIntent Press       = pressWorld
 applyIntent (MouseMoved coords)  = hoverWorld coords
 applyIntent Quit        = quitWorld
 applyIntent Skip        = skipTurn
+applyIntent Clear       = clearBoard
 
 
 

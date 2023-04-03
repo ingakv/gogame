@@ -149,13 +149,14 @@ drawUI r w = do
 
   drawText r w "Press Q to Quit" (800,50)
   drawText r w "Press S to Skip turn" (800,100)
+  drawText r w "Press C to Clear the board" (800,150)
 
     where
       p1x = 750
       p1y = p2y+100
 
       p2x = p1x+100
-      p2y = 180
+      p2y = 280
 
       p3x = p2x+10
       p3y = p2y+35

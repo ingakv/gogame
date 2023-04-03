@@ -11,6 +11,7 @@ data Intent
   | Press
   | Quit
   | Skip
+  | Clear
 
 
 data World = World
