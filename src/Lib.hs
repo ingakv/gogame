@@ -20,34 +20,36 @@ import Data.List as DL        (intersect, elemIndex, length)
 import DataTypes as DT
 import GameLogic
 
-
+-- Window size for the SDL application
 windowSize :: (Int, Int)
 windowSize = (1000, 750)
 
-
+-- Text color used for rendering fonts
 textColor :: SDL.Font.Color
 textColor = SDL.V4 150 0 0 255
 
-
--- Create an empty board based on a given size
+-- Create an empty game board based on the given size (x by y)
 initBoard :: Int -> Int -> [Slot] -> [[Slot]]
 initBoard x y li = do
+  -- Splits the list into rows
   let finalList = chunksOf boardSize li
   if x > 0
   then do
+      -- Recursively initialize rows
       initBoard (x-1) y (insertAt Empty 0 li)
   else if y > 1
     then do
+      -- Move to the next column
       initBoard boardSize (y-1) li
     else
+      -- Return the final initialized board
       finalList
 
-
+-- Calculate the pixel position of a stone based on its coordinates on the board
 stonePos :: Int -> Int -> (Int, Int)
 stonePos x y = (65 + 35*x, 45 + 35*y)
 
-
--- An array of all stone positions
+-- Generate a list of all possible stone positions on the board
 allStonePos :: Int -> Int -> [(Int, Int)] -> [(Int, Int)]
 allStonePos x y li = do
   if x >= 0
@@ -59,27 +61,25 @@ allStonePos x y li = do
     else
       li
 
-
+-- Initialize the game world with default values
 initialWorld :: [(SDL.Texture, SDL.TextureInfo)] -> Font -> [[Slot]] -> World
 initialWorld tx f b = World
-  { exiting = False
-  , mouseCoords = (0,0)
-  , textures = tx
-  , font = f
-  , board = b
-  , curColor = Black
-  , allSlotPos = allStonePos (boardSize-1) (boardSize-1) []
-  , whiteStonePos = []
-  , blackStonePos = []
-  , whiteGroups = []
-  , blackGroups = []
-  , whiteFree = []
-  , blackFree = []
+  { exiting = False               -- Whether the game is exiting
+  , mouseCoords = (0,0)           -- Current mouse coordinates
+  , textures = tx                 -- List of textures
+  , font = f                      -- Font used for rendering
+  , board = b                     -- Initial board setup
+  , curColor = Black              -- Current player color
+  , allSlotPos = allStonePos (boardSize-1) (boardSize-1) [] -- Precomputed slot positions
+  , whiteStonePos = []            -- Positions of white stones
+  , blackStonePos = []            -- Positions of black stones
+  , whiteGroups = []              -- Groupings of white stones
+  , blackGroups = []              -- Groupings of black stones
+  , whiteFree = []                -- Free positions around white stones
+  , blackFree = []                -- Free positions around black stones
   }
 
-
-
--- Given a list of events, update the world
+-- Update the world based on a list of SDL events
 updateWorld :: World -> [SDL.Event] -> World
 updateWorld w
   = foldl' (flip applyIntent) w . fmap (payloadToIntent . SDL.eventPayload)
@@ -88,10 +88,14 @@ updateWorld w
 -- Convert the SDL event to Intent
 payloadToIntent :: SDL.EventPayload -> Intent
 payloadToIntent SDL.QuitEvent            = Quit -- window CLOSE pressed
-payloadToIntent (SDL.KeyboardEvent e)    = -- When Q is pressed, quit also
+payloadToIntent (SDL.KeyboardEvent e)    = -- When Q or Escape is pressed, quit also
   if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeQ ||
      SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeEscape then Quit else
+
+  -- C button to clear the board
   if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeC then Clear else
+
+  -- S button to skip a turn
   if (SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeS)
    && (SDL.keyboardEventKeyMotion e == SDL.Pressed)
    then Skip else Idle
@@ -104,32 +108,33 @@ payloadToIntent _                        = Idle
 motionIntent :: SDL.MouseMotionEventData -> Intent
 motionIntent e = (MouseMoved (fromIntegral x, fromIntegral y))
   where
-    -- observe clever use of pattern matching to get x and y from the event!
     (SDL.P (SDL.V2 x y)) = SDL.mouseMotionEventPos e
 
-
+-- Handle mouse button events
 buttonIntent :: SDL.MouseButtonEventData -> Intent
 buttonIntent _ = Press
 
-
-
+-- Leave the world unchanged for Idle intents
 idleWorld :: World -> World
 idleWorld = id
 
+-- Update the world with new hover coordinates
 hoverWorld :: (Int, Int) -> World -> World
 hoverWorld coords w = w { mouseCoords = coords }
 
+-- Mark the world as exiting
 quitWorld :: World -> World
 quitWorld w = w { exiting = True }
 
+-- Skip the current player's turn
 skipTurn :: World -> World
 skipTurn w = w { curColor = switchColor w }
 
+-- Reset the board to its initial state
 clearBoard :: World -> World
 clearBoard w = w { board = initBoard boardSize boardSize [] }
 
-
-
+-- Apply a given Intent to the World
 applyIntent :: Intent -> World -> World
 applyIntent Idle        = idleWorld
 applyIntent Press       = pressWorld
@@ -138,15 +143,14 @@ applyIntent Quit        = quitWorld
 applyIntent Skip        = skipTurn
 applyIntent Clear       = clearBoard
 
-
-
+-- Find the slot under the mouse cursor (if any)
 intersect' :: World -> (Int,Int)
 intersect' w = inter
   where
     a = fst $ mouseCoords w
     b = snd $ mouseCoords w
 
-    -- Creates two lists consisting of all of the coordinates within 20 pixels of the mouse
+    -- Create two lists consisting of all of the coordinates within 20 pixels of the mouse
     lix = [(a-20) .. (a)]
     liy = [(b-20) .. (b)]
 
@@ -160,7 +164,6 @@ intersect' w = inter
       then inters !! 0
       else (-1,-1)
 
-
 -- Swaps the active player
 switchColor :: World -> Slot
 switchColor w = newColor
@@ -170,16 +173,13 @@ switchColor w = newColor
       | isWhite $ curColor w = Black
       | otherwise = Empty
 
-
-
- -- Converts the index number of a slot into coordinates
+-- Calculate the coordinates of a slot based on its index
 getPlacement :: Int -> Int -> (Int, Int)
 getPlacement x y
   | y < boardSize = (x,y)
   | otherwise = getPlacement (x+1) (y-boardSize)
 
-
--- Updates updateStonePos, updateGroups and checkFree every time the mouse button is pressed
+-- Handle a mouse button press and update the world accordingly
 pressWorld :: World -> World
 pressWorld w = w3
   where
@@ -187,11 +187,9 @@ pressWorld w = w3
     w2 = checkFree w1 0 0
     w3 = updateGroups 0 0 w2 [] []
 
-
     s = boardSize-1
 
-
-    -- Get the slot where the mouse is currently hovering over
+    -- Get the slot currently hovered by the mouse
     inters = intersect' w
 
     (newMap, newColor) =

@@ -9,7 +9,6 @@ import DataTypes as DT
 import qualified Lib
 import qualified GameLogic as GL
 
-
 import qualified SDL
 import qualified Common as C
 
@@ -19,15 +18,13 @@ import Control.Monad.Loops    (iterateUntilM)
 
 import SDL.Font
 
-
--- Main entry to our application logic. It takes the handle to the SDL Window,
--- sets everything Empty and executes the main application loop: handle user inputs,
--- and draw the world.
+-- Main entry point to the application logic.
+-- It initializes the SDL renderer, loads textures and fonts, and starts the main app loop.
 mainApp :: [[Slot]] -> SDL.Window -> IO ()
 mainApp b w =
     C.withRenderer w $ \r -> do
 
-      -- Loading the textures
+      -- Load the textures
       t1 <- C.loadTextureWithInfo r "./assets/background.png"
       t2 <- C.loadTextureWithInfo r "./assets/wood.png"
       t3 <- C.loadTextureWithInfo r "./assets/white_stone.png"
@@ -37,13 +34,12 @@ mainApp b w =
 
       let t = [t1,t2,t3,t4,t5,t6]
 
-      -- Loading the fonts
+      -- Load font for rendering text
       f <- SDL.Font.load "./ttf/roboto/Roboto-Regular.ttf" 14
-
 
       let doRender = Draw.renderWorld r
 
-
+      -- Main loop: handle user input and update the world state.
       void $ iterateUntilM
         DT.exiting
         (\xw ->
@@ -51,17 +47,14 @@ mainApp b w =
         )
         (Lib.initialWorld t f b)
 
-      -- when we are done with the renderer, we need to clean up
+      -- Clean up resources after exiting the loop
       Draw.destroyTextures t
 
+-- Function to destroy loaded textures after use
 destroyTextures :: [(SDL.Texture, SDL.TextureInfo)] -> IO()
 destroyTextures t = mapM_ SDL.destroyTexture (map fst t)
 
-
--- Given the renderer, and the texture and the state of the World,
--- we can render the world. Note that the rendering results in an IO action.
--- This is a wrapper method that clears the rendering target, draws in the window,
--- and swaps the contexts. The actual drawing is done in drawWorld below.
+-- Function to render the world. It clears the renderer, draws the world, and swaps buffers.
 renderWorld :: SDL.Renderer -> World -> IO ()
 renderWorld r w = do
   SDL.clear r
@@ -71,7 +64,6 @@ renderWorld r w = do
 
 
 ------------- DRAW FUNCTIONS ----------------------
-
 
 -- Draw text
 drawText :: SDL.Renderer -> World -> Text -> (Int, Int) -> IO ()
@@ -85,8 +77,7 @@ drawText r world t (x, y) = do
     SDL.freeSurface textSurf
     SDL.destroyTexture surf
 
-
--- The actual method for drawing that is used by the rendering method above.
+-- Main drawing function that handles different elements on the screen.
 drawWorld :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
 drawWorld r t w = do
 
@@ -112,30 +103,26 @@ drawWorld r t w = do
     -- Checks if the mouse is hovering over a slot
     checkMouse :: IO ()
     checkMouse = do
-
       let inters = Lib.intersect' w
-
-      -- If it is hovering over a slot, it does the following
       if (fst inters) >= 0
       then
-        -- Draws the hover stone in the correct color
+        -- Draw the hover stone in the correct color
         if GL.isBlack $ curColor w
           then do drawStone r (t !! 5) (inters)
         else drawStone r (t !! 4) (inters)
       else pure()
 
-
+-- Function to render UI components
 drawUI :: SDL.Renderer -> World -> IO ()
 drawUI r w = do
 
-  -- The letters and numbers along the edge of the board
+  -- Draw letters and numbers along the edge of the board
   drawText r w letters (70, 15)
   drawText r w letters (70, (snd Lib.windowSize) - 50)
   printNumbers GL.boardSize 25
   printNumbers GL.boardSize $ 730
 
-
-  -- The visual for seeing basic info about the current state of the board
+  -- Draw game state info
   SDL.rendererDrawColor r SDL.$= SDL.V4 125 155 155 255
   SDL.drawLine r (C.mkPoint p4x $ fromIntegral p3y-10) (C.mkPoint p4x $ fromIntegral p1y+25)
 
@@ -148,15 +135,13 @@ drawUI r w = do
   drawText r w (pack $ show $ length $ blackFree w) (p3x+80,p1y)
 
 
-
   drawText r w "Number of" (p1x,p3y-8)
   drawText r w "groups" (p1x+10,p3y+7)
 
   drawText r w "Degree of" (p1x,p1y-8)
   drawText r w "freedom" (p1x+2,p1y+7)
 
-
-  -- The descriptions of the shortcuts
+  -- Draw shortcut instructions
   drawText r w "Press Q to Quit" (800,50)
   drawText r w "Press S to Skip turn" (800,100)
   drawText r w "Press C to Clear the board" (800,150)
@@ -178,6 +163,7 @@ drawUI r w = do
       letters :: Text
       letters = (pack $ GL.insertEveryN 11 1 ' ' $ GL.insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! GL.boardSize)) ['A'..'Z'])
 
+      -- Print numbers on the board edges
       printNumbers :: Int -> Int -> IO ()
       printNumbers n posx = do
         drawText r w (pack $ show n) (posx, 10+(35*n))
@@ -187,20 +173,17 @@ drawUI r w = do
 
 
 
-
--- Draws a line between two points that are computed based on the number n
+-- Draw a line between two points that are computed based on the number n
 
 -- Horisontal lines
 horLine :: SDL.Renderer -> Int -> IO ()
 horLine r n = do
-
   SDL.rendererDrawColor r SDL.$= SDL.V4 0 0 0 255
   SDL.drawLine r (C.mkPoint x ay) (C.mkPoint x by)
     where
       x = fromIntegral $ 75 + n*35
       ay = 50
       by = fromIntegral $ 60 + (GL.boardSize-1)*35
-
 
 -- Vertical lines
 verLine :: SDL.Renderer -> Int -> IO ()
@@ -228,7 +211,7 @@ drawVerLines r n = do
   else pure()
 
 
--- Checks if a slot is empty, and draws a stone in that spot if it isn't
+-- Check if a slot is empty, and draw a stone in that spot if it isn't
 checkBoard :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> Int -> Int -> IO ()
 checkBoard r tx w x y = do
 
@@ -261,7 +244,6 @@ drawBoard r (t, ti) = do
     board' = (Just $ C.mkRect marginx marginy s s)
 
 
-
 -- Draw a singular stone with texture
 drawStone :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> (Int, Int) -> IO ()
 drawStone r (t, ti) (px, py) = do
@@ -272,7 +254,6 @@ drawStone r (t, ti) (px, py) = do
     d = 20
     stoneTexture = (Just $ C.mkRect 0 0 (SDL.textureWidth ti) (SDL.textureHeight ti))
     stone = (Just $ C.mkRect posx posy d d)
-
 
 
 -- Draw the background
@@ -291,5 +272,3 @@ drawBackground r (t, ti) (winWidth, winHeight) = do
               loop (x + fromIntegral texWidth) y
 
   loop 0 0
-
-

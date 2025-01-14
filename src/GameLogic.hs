@@ -19,7 +19,7 @@ import Data.List as DL        (intersect, insert, sortBy, delete, union, nub, le
 
 import DataTypes
 
-
+-- Define the size of the board
 boardSize :: Int
 boardSize = 19
 
@@ -27,31 +27,25 @@ boardSize = 19
 -- Checks if a slot adjacent to a given slot is empty, and inserts it in the array if it is
 checkFree :: World -> Int -> Int -> World
 checkFree w x y = do
-
   -- All slots / intersections on the board
   let b = [(u,v) | u <- [0..(boardSize-1)], v <- [0..(boardSize-1)]]
 
   -- The slots on the board that are empty
   let li = (b \\ (whiteStonePos w)) \\ (blackStonePos w)
 
-
   -- Check if the slot is occupied by a white stone
   if x < (length $ whiteGroups w)
   then do
-
     let bs = whiteGroups w !! x
 
-    -- Uses the checkNbors function to find the empty slots around the given stone
+    -- Find the empty slots around the given stone
     let freeGr = concat [checkNbors a li | a <- bs]
 
-    -- If the group's degree of freedom is 0, the stone gets captured
+    -- Handle capture if the group's degree of freedom is 0
     let (newPos , newWorld) = if length freeGr == 0 then ((whiteStonePos w) \\ bs , deleteGroup w bs $ (length bs)-1) else (whiteStonePos w , w)
 
-
-    -- Adds it to the array
+    -- Update the free slots and world state
     let new = union freeGr (whiteFree w)
-
-    -- Updates the world
     checkFree newWorld{ whiteStonePos = newPos , whiteFree = new } (x+1) y
 
 
@@ -80,16 +74,14 @@ deleteGroup w gr x
   | otherwise = deleteGroup w{board = newBoard} gr (x-1)
   where newBoard = replaceBoard w (snd (gr !! x) , fst (gr !! x)) Empty
 
-
--- Joins groups together and sorts them
+-- Sort and merge groups of connected stones
 fixList :: [[(Int, Int)]] -> [[(Int, Int)]]
 fixList l = joinGroups x li
   where
     li = completeSort l
     x = (DL.length li -1)
 
-
--- Joins groups with common stones together
+-- Merges groups with common stones
 joinGroups :: Int -> [[(Int, Int)]] -> [[(Int, Int)]]
 joinGroups x li = do
   if x > 0
@@ -97,19 +89,15 @@ joinGroups x li = do
     let s = (li !! x)
     let t = (li !! (x-1))
     let newLi = if DL.length (intersect s t) > 0 then insert (union s t) (delete s $ delete t li) else li
-
     joinGroups (x-1) newLi
 
   else li
 
-
-
-
--- Checks if a given stone has a neighbor of the same color
+-- Checks adjacent slots for stones of the same color
 checkNbors :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 checkNbors m mPos = (checkLeft m mPos) ++ (checkRight m mPos) ++ (checkUp m mPos) ++ (checkDown m mPos)
 
-
+-- Helper functions to check specific directions
 checkLeft :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 checkLeft m mPos
   | (elem left mPos) = [left]
@@ -123,7 +111,6 @@ checkRight m mPos
   | otherwise = []
   where
       right = ((fst m+1), snd m)
-
 
 checkUp :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 checkUp m mPos
@@ -140,14 +127,13 @@ checkDown m mPos
       down = (fst m, (snd m+1))
 
 
--- Finds connecting groups of stones that are in a '+' shape
+-- Finds connecting stones that are in a '+' shape
 findGroups :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 findGroups m mPos = do
    let nbors = checkNbors m mPos
    if DL.length nbors > 0 then insert m nbors else [m]
 
-
--- Updates the coherent groups on the board
+-- Updates groups of stones on the board
 updateGroups :: Int -> Int -> World -> [[(Int, Int)]] -> [[(Int, Int)]] -> World
 updateGroups x y w wli bli = do
   -- x is the amount of white stones currently on the board, y is the amount of black stones
@@ -173,15 +159,11 @@ updateGroups x y w wli bli = do
     -- When all stones on the board have been checked, return these two world variables, and remove duplicates
     else w { whiteGroups = (nub wli), blackGroups = (nub bli) }
 
-
--- Takes a list of lists and returns the list where all the sublists are sorted
--- and are ordered from biggest sublist to smallest
+-- Sorts sublists by size in descending order
 completeSort :: [[a]] -> [[a]]
 completeSort li = sortBy (flip $ comparing DL.length) li
 
-
-
------------------- A few small useful functions -----------------------------
+------------------ Utility functions -----------------------------
 
 -- Checks the color of a given slot
 isWhite :: Slot -> Bool
@@ -196,18 +178,15 @@ isEmpty :: Slot -> Bool
 isEmpty Empty = True
 isEmpty _ = False
 
-
--- Replacing an element in a list
+-- Replaces an element in a list
 replace :: Int -> a -> [a] -> [a]
 replace pos newVal list = take pos list ++ newVal : drop (pos+1) list
-
 
 -- Replaces a slot on the board
 replaceBoard :: World -> (Int , Int) -> Slot -> [[Slot]]
 replaceBoard w (x,y) s = replace y (replace x s (board w !! y)) $ board w
 
-
--- Inserts a given character t times for every n characters provided in the string
+-- Inserts a given character t times for every n characters in a string
 insertEveryN :: Int ->  Int -> Char -> [Char] -> [Char]
 insertEveryN 0 _ _ xs = xs
 insertEveryN _ _ _ [] = []
@@ -216,8 +195,7 @@ insertEveryN n t y xs
  | t < 1 = xs
  | otherwise = take n xs ++ (concatMap (replicate t) [y]) ++ insertEveryN n t y (drop n xs)
 
-
--- Inserts an element at a given location
+-- Inserts an element at a given index in a list
 insertAt :: a -> Int -> [a] -> [a]
 insertAt newElement _ [] = [newElement]
 insertAt newElement i (a:as)
