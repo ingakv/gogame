@@ -1,31 +1,25 @@
-cabal-version: 1.12
+cabal-version:      3.0
 
--- This file has been generated from package.yaml by hpack version 0.35.1.
---
--- see: https://github.com/sol/hpack
+name:               gogame
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             ingakv
+maintainer:         ingakv@stud.ntnu.no
+-- copyright:
+build-type:         Simple
+extra-source-files:    README.md
 
-name:           gogame
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/marni/gogame#readme>
-homepage:       https://github.com/marni/gogame#readme
-bug-reports:    https://github.com/marni/gogame/issues
-author:         Mariusz Nowostawski
-maintainer:     mariusz.nowostawski@ntnu.no
-copyright:      2023 (C) Nowostawski
-license:        BSD3
-license-file:   LICENSE
-build-type:     Simple
-extra-source-files:
-    README.md
+common warnings
+    ghc-options: -Wall
 
-source-repository head
-  type: git
-  location: https://github.com/marni/gogame
 
 library
   exposed-modules:
       GameLogic
-    ,  Lib
+    , Lib
     , Common
     , Draw
     , DataTypes
