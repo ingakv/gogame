@@ -32,30 +32,30 @@ checkFree w x y = do
   let b = [(u,v) | u <- [0..(boardSize-1)], v <- [0..(boardSize-1)]]
 
   -- The slots on the board that are empty
-  let li = (b \\ (whiteMarkerPos w)) \\ (blackMarkerPos w)
+  let li = (b \\ (whiteStonePos w)) \\ (blackStonePos w)
 
 
-  -- Check if the slot is occupied by a white marker
+  -- Check if the slot is occupied by a white stone
   if x < (length $ whiteGroups w)
   then do
 
     let bs = whiteGroups w !! x
 
-    -- Uses the checkNbors function to find the empty slots around the given marker
+    -- Uses the checkNbors function to find the empty slots around the given stone
     let freeGr = concat [checkNbors a li | a <- bs]
 
     -- If the group's degree of freedom is 0, the stone gets captured
-    let (newPos , newWorld) = if length freeGr == 0 then ((whiteMarkerPos w) \\ bs , deleteGroup w bs $ (length bs)-1) else (whiteMarkerPos w , w)
+    let (newPos , newWorld) = if length freeGr == 0 then ((whiteStonePos w) \\ bs , deleteGroup w bs $ (length bs)-1) else (whiteStonePos w , w)
 
 
     -- Adds it to the array
     let new = union freeGr (whiteFree w)
 
     -- Updates the world
-    checkFree newWorld{ whiteMarkerPos = newPos , whiteFree = new } (x+1) y
+    checkFree newWorld{ whiteStonePos = newPos , whiteFree = new } (x+1) y
 
 
-    -- Repeat for if the slot is occupied by a black marker
+    -- Repeat for if the slot is occupied by a black stone
   else
     if y < (length $ blackGroups w)
     then do
@@ -63,16 +63,16 @@ checkFree w x y = do
 
       let freeGr = concat [checkNbors a li | a <- bs]
 
-      let (newPos , newWorld) = if length freeGr == 0 then ((blackMarkerPos w) \\ bs , deleteGroup w bs $ (length bs)-1) else (blackMarkerPos w , w)
+      let (newPos , newWorld) = if length freeGr == 0 then ((blackStonePos w) \\ bs , deleteGroup w bs $ (length bs)-1) else (blackStonePos w , w)
 
       let new = union freeGr (blackFree w)
 
-      checkFree newWorld{ blackMarkerPos = newPos , blackFree = new } x (y+1)
+      checkFree newWorld{ blackStonePos = newPos , blackFree = new } x (y+1)
 
     else w
 
 
--- Deletes and entire group of markers
+-- Deletes and entire group of stones
 deleteGroup :: World -> [(Int, Int)] -> Int -> World
 deleteGroup w gr x
   | x < 0 = w
@@ -89,7 +89,7 @@ fixList l = joinGroups x li
     x = (DL.length li -1)
 
 
--- Joins groups with common markers together
+-- Joins groups with common stones together
 joinGroups :: Int -> [[(Int, Int)]] -> [[(Int, Int)]]
 joinGroups x li = do
   if x > 0
@@ -105,7 +105,7 @@ joinGroups x li = do
 
 
 
--- Checks if a given marker has a neighbor of the same color
+-- Checks if a given stone has a neighbor of the same color
 checkNbors :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 checkNbors m mPos = (checkLeft m mPos) ++ (checkRight m mPos) ++ (checkUp m mPos) ++ (checkDown m mPos)
 
@@ -140,7 +140,7 @@ checkDown m mPos
       down = (fst m, (snd m+1))
 
 
--- Finds connecting groups of markers that are in a '+' shape
+-- Finds connecting groups of stones that are in a '+' shape
 findGroups :: (Int, Int) -> [(Int, Int)] -> [(Int, Int)]
 findGroups m mPos = do
    let nbors = checkNbors m mPos
@@ -150,27 +150,27 @@ findGroups m mPos = do
 -- Updates the coherent groups on the board
 updateGroups :: Int -> Int -> World -> [[(Int, Int)]] -> [[(Int, Int)]] -> World
 updateGroups x y w wli bli = do
-  -- x is the amount of white markers currently on the board, y is the amount of black markers
-  if x < DL.length (whiteMarkerPos w)
+  -- x is the amount of white stones currently on the board, y is the amount of black stones
+  if x < DL.length (whiteStonePos w)
   then do
     -- Find the potential group
-    let group = findGroups ((whiteMarkerPos w) !! x) (whiteMarkerPos w)
+    let group = findGroups ((whiteStonePos w) !! x) (whiteStonePos w)
 
     -- Insert it into the array
     let new = fixList $ insert group wli
 
-    -- Loops through each white marker
+    -- Loops through each white stone
     updateGroups (x+1) y w new bli
 
-  -- Repeat for the black markers
+  -- Repeat for the black stones
   else
-    if y < DL.length (blackMarkerPos w)
+    if y < DL.length (blackStonePos w)
     then do
-      let group = findGroups ((blackMarkerPos w) !! y) (blackMarkerPos w)
+      let group = findGroups ((blackStonePos w) !! y) (blackStonePos w)
       let new = fixList $ insert group bli
       updateGroups x (y+1) w wli new
 
-    -- When all markers on the board have been checked, return these two world variables, and remove duplicates
+    -- When all stones on the board have been checked, return these two world variables, and remove duplicates
     else w { whiteGroups = (nub wli), blackGroups = (nub bli) }
 
 

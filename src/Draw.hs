@@ -30,10 +30,10 @@ mainApp b w =
       -- Loading the textures
       t1 <- C.loadTextureWithInfo r "./assets/background.png"
       t2 <- C.loadTextureWithInfo r "./assets/wood.png"
-      t3 <- C.loadTextureWithInfo r "./assets/white_marker.png"
-      t4 <- C.loadTextureWithInfo r "./assets/black_marker.png"
-      t5 <- C.loadTextureWithInfo r "./assets/white_marker_hover.png"
-      t6 <- C.loadTextureWithInfo r "./assets/black_marker_hover.png"
+      t3 <- C.loadTextureWithInfo r "./assets/white_stone.png"
+      t4 <- C.loadTextureWithInfo r "./assets/black_stone.png"
+      t5 <- C.loadTextureWithInfo r "./assets/white_stone_hover.png"
+      t6 <- C.loadTextureWithInfo r "./assets/black_stone_hover.png"
 
       let t = [t1,t2,t3,t4,t5,t6]
 
@@ -99,13 +99,13 @@ drawWorld r t w = do
   -- The lines on the board
   drawLines r 0
 
-  -- Draws the markers currently on the board
+  -- Draws the stones currently on the board
   checkBoard r [t!!2,t!!3] w 0 0
 
   -- Text
   drawUI r w
 
-  -- Hover marker
+  -- Hover stone
   checkMouse
 
   where
@@ -118,10 +118,10 @@ drawWorld r t w = do
       -- If it is hovering over a slot, it does the following
       if (fst inters) >= 0
       then
-        -- Draws the hover marker in the correct color
+        -- Draws the hover stone in the correct color
         if GL.isBlack $ curColor w
-          then do drawMarker r (t !! 5) (inters)
-        else drawMarker r (t !! 4) (inters)
+          then do drawStone r (t !! 5) (inters)
+        else drawStone r (t !! 4) (inters)
       else pure()
 
 
@@ -173,7 +173,7 @@ drawUI r w = do
       p3y = p2y+35
 
       p4x = fromIntegral (fst Lib.windowSize)-252
-      
+
 
       letters :: Text
       letters = (pack $ GL.insertEveryN 11 1 ' ' $ GL.insertEveryN 1 8 ' ' $ takeWhile (/= (['A'..'Z'] !! GL.boardSize)) ['A'..'Z'])
@@ -212,7 +212,7 @@ verLine r n = do
       y = fromIntegral $ 55 + n*35
 
 
--- Draw the lines where the markers are to be placed along
+-- Draw the lines where the stones are to be placed along
 drawLines :: SDL.Renderer -> Int -> IO ()
 drawLines r n = do
   horLine r n
@@ -234,9 +234,9 @@ checkBoard r tx w x y = do
 
   -- Draws the stone in the correct color
   if (GL.isWhite ((board w !! x) !! y))
-    then do drawMarker r (tx !! 0) (Lib.markerPos x y)
+    then do drawStone r (tx !! 0) (Lib.stonePos x y)
   else if (GL.isBlack ((board w !! x) !! y))
-    then do drawMarker r (tx !! 1) (Lib.markerPos x y)
+    then do drawStone r (tx !! 1) (Lib.stonePos x y)
   else pure()
 
   -- Loops through the entire board and recursively draws all of the stones
@@ -263,15 +263,15 @@ drawBoard r (t, ti) = do
 
 
 -- Draw a singular stone with texture
-drawMarker :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> (Int, Int) -> IO ()
-drawMarker r (t, ti) (px, py) = do
-  SDL.copy r t markerTexture marker
+drawStone :: SDL.Renderer -> (SDL.Texture, SDL.TextureInfo) -> (Int, Int) -> IO ()
+drawStone r (t, ti) (px, py) = do
+  SDL.copy r t stoneTexture stone
   where
     posx = fromIntegral px
     posy = fromIntegral py
     d = 20
-    markerTexture = (Just $ C.mkRect 0 0 (SDL.textureWidth ti) (SDL.textureHeight ti))
-    marker = (Just $ C.mkRect posx posy d d)
+    stoneTexture = (Just $ C.mkRect 0 0 (SDL.textureWidth ti) (SDL.textureHeight ti))
+    stone = (Just $ C.mkRect posx posy d d)
 
 
 

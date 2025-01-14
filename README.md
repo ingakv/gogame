@@ -32,7 +32,7 @@ The libraries are in the `src` folder:
      - Deleting, inserting and joining together stones and groups
      - Checking free slots
      - Checking the stones that are adjacent to a given stone
-   - Also contains a few smaller functions I made that use throughout the code, such as `replace` and `insertAt`
+   - Also contains a few smaller functions I made that are used throughout the project, such as `replace` and `insertAt`
 5. Lib.hs
    - Contains all functions relating to intent (motion, button, payload, apply)
    - Also contains all functions that doesn't fit into the other libraries, such as:
@@ -44,8 +44,8 @@ The textures are in the `assets` folder:
 
 - Background
 - Board
-- Black and White markers
-- Markers when the mouse is hovering over a slot
+- Black and White stones
+- Stones when the mouse is hovering over a slot
   - Are the above png files at 50% opacity
 - A few photoshop files are also included for when I wanted to tweak something about a certain texture as I progressed in the assignment
 - The commit message syntax is also in there for easy access for myself, but I will most likely not remove it as it can be useful to keep there
@@ -78,7 +78,7 @@ The test [succeeded](test/gogame-0.1.0.0-gogame-test.log)
 * A stone cannot be placed on top of another stone
 * A stone can only be placed within the board
 * Self-capture / suicide is not possible
-* When hovering over an available intersection, a semi-transparent marker with the correct color will be shown.
+* When hovering over an available intersection, a semi-transparent stone with the correct color will be shown.
 * UI using SDL2, including
 
   * Textures
@@ -128,5 +128,5 @@ The test [succeeded](test/gogame-0.1.0.0-gogame-test.log)
 - I came upon a problem when working on loading in the textures where launching the exe file would take up a lot of memory and eventually crash. I solved this by loading in the textures and the font I used for the on screen printing, into the initialWorld, rather than loading inside of the draw functions
 - I have focused on one issue or feature at a time. And have made a commit each time a fix or feature has either been fully implemented or I made major progress on it.
 
-  - An example of this is when I decided to change the method of capture. At first I did this by going through the individual markers / stones, and after figuring out I couldn't track the groups of stones this way, I searched through the groups. I would commit when I would get the new feature to work, before it was implemented etc.
+  - An example of this is when I decided to change the method of capture. At first I did this by going through the individual stones, and after figuring out I couldn't track the groups of stones this way, I searched through the groups. I would commit when I would get the new feature to work, before it was implemented etc.
 - I have followed the commit message standard to the best of my ability

@@ -22,8 +22,8 @@ data World = World
   , font :: SDL.Font.Font
   , board :: [[Slot]]
   , allSlotPos :: [(Int, Int)]
-  , whiteMarkerPos :: [(Int, Int)]
-  , blackMarkerPos :: [(Int, Int)]
+  , whiteStonePos :: [(Int, Int)]
+  , blackStonePos :: [(Int, Int)]
   , whiteGroups :: [[(Int, Int)]]
   , blackGroups :: [[(Int, Int)]]
   , whiteFree :: [(Int, Int)]

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Lib (
-  markerPos
+  stonePos
 , windowSize
 , intersect'
 , textColor
@@ -43,19 +43,19 @@ initBoard x y li = do
       finalList
 
 
-markerPos :: Int -> Int -> (Int, Int)
-markerPos x y = (65 + 35*x, 45 + 35*y)
+stonePos :: Int -> Int -> (Int, Int)
+stonePos x y = (65 + 35*x, 45 + 35*y)
 
 
--- An array of all marker positions
-allMarkerPos :: Int -> Int -> [(Int, Int)] -> [(Int, Int)]
-allMarkerPos x y li = do
+-- An array of all stone positions
+allStonePos :: Int -> Int -> [(Int, Int)] -> [(Int, Int)]
+allStonePos x y li = do
   if x >= 0
   then do
-      allMarkerPos (x-1) y (insertAt (markerPos x y) 0 li)
+      allStonePos (x-1) y (insertAt (stonePos x y) 0 li)
   else if y > 0
     then do
-      allMarkerPos (boardSize-1) (y-1) li
+      allStonePos (boardSize-1) (y-1) li
     else
       li
 
@@ -68,9 +68,9 @@ initialWorld tx f b = World
   , font = f
   , board = b
   , curColor = Black
-  , allSlotPos = allMarkerPos (boardSize-1) (boardSize-1) []
-  , whiteMarkerPos = []
-  , blackMarkerPos = []
+  , allSlotPos = allStonePos (boardSize-1) (boardSize-1) []
+  , whiteStonePos = []
+  , blackStonePos = []
   , whiteGroups = []
   , blackGroups = []
   , whiteFree = []
@@ -89,7 +89,8 @@ updateWorld w
 payloadToIntent :: SDL.EventPayload -> Intent
 payloadToIntent SDL.QuitEvent            = Quit -- window CLOSE pressed
 payloadToIntent (SDL.KeyboardEvent e)    = -- When Q is pressed, quit also
-  if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeQ then Quit else
+  if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeQ ||
+     SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeEscape then Quit else
   if SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeC then Clear else
   if (SDL.keysymKeycode (SDL.keyboardEventKeysym e) == SDL.KeycodeS)
    && (SDL.keyboardEventKeyMotion e == SDL.Pressed)
@@ -178,11 +179,11 @@ getPlacement x y
   | otherwise = getPlacement (x+1) (y-boardSize)
 
 
--- Updates updateMarkerPos, updateGroups and checkFree every time the mouse button is pressed
+-- Updates updateStonePos, updateGroups and checkFree every time the mouse button is pressed
 pressWorld :: World -> World
 pressWorld w = w3
   where
-    w1 = updateMarkerPos s s w { board = newMap, curColor = newColor , whiteFree = [] , blackFree = [] } [] []
+    w1 = updateStonePos s s w { board = newMap, curColor = newColor , whiteFree = [] , blackFree = [] } [] []
     w2 = checkFree w1 0 0
     w3 = updateGroups 0 0 w2 [] []
 
@@ -211,23 +212,23 @@ pressWorld w = w3
       else (board w, curColor w)
 
 
--- Updates the positions of the markers
-updateMarkerPos :: Int -> Int -> World -> [(Int, Int)] -> [(Int, Int)] -> World
-updateMarkerPos x y w wli bli = do
+-- Updates the positions of the stones
+updateStonePos :: Int -> Int -> World -> [(Int, Int)] -> [(Int, Int)] -> World
+updateStonePos x y w wli bli = do
   if x > 0
     then do
-        -- Inserts all the white markers into a list
+        -- Inserts all the white stones into a list
         if isWhite (((board w) !! x) !! y)
-        then do updateMarkerPos (x-1) y w (insertAt (x,y) 0 $ wli) bli
+        then do updateStonePos (x-1) y w (insertAt (x,y) 0 $ wli) bli
 
         else
-          -- Repeats for all of the black markers
+          -- Repeats for all of the black stones
           if isBlack (((board w) !! x) !! y)
-          then do updateMarkerPos (x-1) y w wli (insertAt (x,y) 0 $ bli)
-          else updateMarkerPos (x-1) y w wli bli
+          then do updateStonePos (x-1) y w wli (insertAt (x,y) 0 $ bli)
+          else updateStonePos (x-1) y w wli bli
   else
     if y > 0
-    then do updateMarkerPos (boardSize-1) (y-1) w wli bli
-    else w { whiteMarkerPos = wli, blackMarkerPos = bli }
+    then do updateStonePos (boardSize-1) (y-1) w wli bli
+    else w { whiteStonePos = wli, blackStonePos = bli }
 
 
