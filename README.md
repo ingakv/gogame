@@ -1,5 +1,8 @@
 # prog2006-assignment-1 Inga Kvam
 
+This is a simple module for visualizing a go game, which simulate gameplay with all of the features that are included in a regular game of go. It is written in Haskell.
+
+
 ## Project structure
 
 My sdl2 setup is located [here](https://github.com/ingakv/sdlpain)
