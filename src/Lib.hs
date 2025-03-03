@@ -8,17 +8,27 @@ module Lib (
 , initBoard
 , initialWorld
 , updateWorld
+, loadFromFile
+, saveGame
+, saveFilePath
+, tempFilePath
 ) where
 
 import qualified SDL
+import System.IO
 
 import Data.Foldable          (foldl')
 import SDL.Font
 import Data.List.Split        (chunksOf)
-import Data.List as DL        (intersect, elemIndex, length)
-
+import Data.List as DL        (intersect, elemIndex, length, intercalate)
 import DataTypes as DT
 import GameLogic
+
+saveFilePath :: String
+saveFilePath = "game.sgf"
+
+tempFilePath :: String
+tempFilePath = "temp.sgf"
 
 -- Window size for the SDL application
 windowSize :: (Int, Int)
@@ -213,5 +223,20 @@ pressWorld w = newWorld
 
       else (board w, curColor w)
 
+
+
+loadFromFile :: Handle -> IO [[Slot]]
+loadFromFile handle = do
+    contents <- readFile saveFilePath
+    let readBoard = chunksOf boardSize $ map charToSlot [c | c <- contents, elem c ['E', 'W', 'B']]
+    let loadedBoard = if (length $ concat readBoard) == (boardSize * boardSize) then readBoard else initBoard boardSize boardSize []
+    return loadedBoard
+
+
+saveGame :: World -> IO ()
+saveGame w = do
+    -- Write the board to a text file
+    let boardString = unlines $ map (intercalate " " . map slotToChar) (board w)
+    writeFile tempFilePath boardString
 
 

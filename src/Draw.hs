@@ -13,7 +13,6 @@ import qualified SDL
 import qualified Common as C
 
 import Data.Text        (Text, pack)
-import Control.Monad          (void)
 import Control.Monad.Loops    (iterateUntilM)
 
 import SDL.Font
@@ -40,7 +39,7 @@ mainApp b w =
       let doRender = Draw.renderWorld r
 
       -- Main loop: handle user input and update the world state.
-      void $ iterateUntilM
+      finalWorld <- iterateUntilM
         DT.exiting
         (\xw ->
              SDL.pollEvents >>= (\xw' -> xw' <$ doRender xw') . Lib.updateWorld xw
@@ -49,6 +48,9 @@ mainApp b w =
 
       -- Clean up resources after exiting the loop
       Draw.destroyTextures t
+
+      -- Save the final game state to a file
+      Lib.saveGame finalWorld
 
 -- Function to destroy loaded textures after use
 destroyTextures :: [(SDL.Texture, SDL.TextureInfo)] -> IO()

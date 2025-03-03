@@ -11,6 +11,8 @@ module GameLogic (
 , insertAt
 , fromJust
 , insertEveryN
+, slotToChar
+, charToSlot
 ) where
 
 import Data.Ord               (comparing)
@@ -239,3 +241,14 @@ insertAt newElement i (a:as)
 fromJust :: Maybe Int -> Int
 fromJust (Just x) = x
 fromJust Nothing = -1
+
+-- Convert Slot to Char for writing to file
+slotToChar :: Slot -> String
+slotToChar Empty = "E"
+slotToChar Black = "B"
+slotToChar White = "W"
+
+charToSlot :: Char -> Slot
+charToSlot 'W' = White
+charToSlot 'B' = Black
+charToSlot _ = Empty
