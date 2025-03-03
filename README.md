@@ -2,7 +2,6 @@
 
 This is a simple module for visualizing a go game, which simulate gameplay with all of the features that are included in a regular game of go. It is written in Haskell.
 
-
 ## Project structure
 
 My sdl2 setup is located [here](https://github.com/ingakv/sdlpain)
@@ -104,6 +103,4 @@ The test [succeeded](test/gogame-0.1.0.0-gogame-test.log)
   * I chose to not implement KO as I feel like it would be one of the more advanced features. The way I would have done it is by storing two copies of the board before any change was made to it. So board_1 would be how the board was one turn ago, and board_2 would be how it was two rounds ago. When a stone was attempted to be placed. I would then check if the board was back to how it looked in one of the two previous rounds. If it was, the stone would not be able to be placed
 * Reading from SGF file is not done the "correct" way
   * It should be able to read an SGF file quickly and check whether it exists.
-* Cannot save a game / board to SGF file
-  * I have not been able to completely learn how to implement reading from and writing to an SGF file because of time issues. But the implementation would be done by adjusting the already implemented code for reading from an SGF / text file
 * Should also have at least 50% test coverage.

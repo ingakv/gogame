@@ -21,6 +21,8 @@ data World = World
   , curColor :: Slot                -- The current player's color (White or Black)
   , font :: SDL.Font.Font           -- The font used for rendering text
   , board :: [[Slot]]               -- The game board represented as a 2D list of slots, each representing an empty, white, or black slot
+  , prevBoard1 :: [[Slot]]
+  , prevBoard2 :: [[Slot]]
   , allSlotPos :: [(Int, Int)]      -- List of all possible slot positions on the board
   , whiteStonePos :: [(Int, Int)]   -- List of positions where white stones are placed
   , blackStonePos :: [(Int, Int)]   -- List of positions where black stones are placed
@@ -35,3 +37,4 @@ data Slot
   = Empty  -- The slot is empty
   | White  -- The slot contains a white stone
   | Black  -- The slot contains a black stone
+  deriving (Eq)

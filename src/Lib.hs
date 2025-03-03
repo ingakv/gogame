@@ -39,18 +39,21 @@ textColor :: SDL.Font.Color
 textColor = SDL.V4 150 0 0 255
 
 -- Create an empty game board based on the given size (x by y)
-initBoard :: Int -> Int -> [Slot] -> [[Slot]]
-initBoard x y li = do
+initBoard :: [[Slot]]
+initBoard = helperInitBoard boardSize boardSize []
+
+helperInitBoard :: Int -> Int -> [Slot] -> [[Slot]]
+helperInitBoard x y li = do
   -- Splits the list into rows
   let finalList = chunksOf boardSize li
   if x > 0
   then do
       -- Recursively initialize rows
-      initBoard (x-1) y (insertAt Empty 0 li)
+      helperInitBoard (x-1) y (insertAt Empty 0 li)
   else if y > 1
     then do
       -- Move to the next column
-      initBoard boardSize (y-1) li
+      helperInitBoard boardSize (y-1) li
     else
       -- Return the final initialized board
       finalList
@@ -79,6 +82,8 @@ initialWorld tx f b = World
   , textures = tx                 -- List of textures
   , font = f                      -- Font used for rendering
   , board = b                     -- Initial board setup
+  , prevBoard1 = []
+  , prevBoard2 = []
   , curColor = Black              -- Current player color
   , allSlotPos = allStonePos (boardSize-1) (boardSize-1) [] -- Precomputed slot positions
   , whiteStonePos = []            -- Positions of white stones
@@ -143,7 +148,9 @@ skipTurn w = updateStones w { curColor = switchColor w }
 -- Reset the board to its initial state
 clearBoard :: World -> World
 clearBoard w = w
-  { board = initBoard boardSize boardSize []
+  { board = initBoard
+  , prevBoard1 = initBoard
+  , prevBoard2 = initBoard
   , whiteStonePos = []
   , blackStonePos = []
   , whiteGroups = []
@@ -201,27 +208,31 @@ getPlacement x y
 pressWorld :: World -> World
 pressWorld w = newWorld
   where
-    newWorld = updateStones w { board = newMap, curColor = newColor }
+    newWorld = updateStones w { board = newBoard, curColor = newColor, prevBoard1 = oldBoard1, prevBoard2 = oldBoard2 }
 
     -- Get the slot currently hovered by the mouse
     inters = intersect' w
 
-    (newMap, newColor) =
+    prev = (board w, curColor w, prevBoard1 w, prevBoard2 w)
+
+    (newBoard, newColor, oldBoard1, oldBoard2) =
       -- Checks if the mouse was hovering over a slot when it was pressed
       if (fst inters) >= 0
       then do
         -- If it was, extract the placement of the slot
         let index = getPlacement 0 $ fromJust $ elemIndex (inters) $ allSlotPos w
 
-        -- Checks if the slot is already occupied
-        if isEmpty ((board w !! snd index) !! fst index)
+        let tempNewBoard = replaceBoard w index (curColor w)
+
+        -- Checks if the slot is already occupied, and if it matches any of the previous boards
+        if isEmpty ((board w !! snd index) !! fst index) && tempNewBoard /= prevBoard1 w && tempNewBoard /= prevBoard2 w
         then do
           -- Replace the slot with the new one and switch the active color
-          (replaceBoard w index (curColor w) , switchColor w)
+          (tempNewBoard, switchColor w, board w, prevBoard1 w)
 
-        else (board w, curColor w)
+        else prev
 
-      else (board w, curColor w)
+      else prev
 
 
 
@@ -229,7 +240,7 @@ loadFromFile :: Handle -> IO [[Slot]]
 loadFromFile handle = do
     contents <- readFile saveFilePath
     let readBoard = chunksOf boardSize $ map charToSlot [c | c <- contents, elem c ['E', 'W', 'B']]
-    let loadedBoard = if (length $ concat readBoard) == (boardSize * boardSize) then readBoard else initBoard boardSize boardSize []
+    let loadedBoard = if (length $ concat readBoard) == (boardSize * boardSize) then readBoard else initBoard
     return loadedBoard
 
 

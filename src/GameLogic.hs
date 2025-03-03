@@ -13,6 +13,7 @@ module GameLogic (
 , insertEveryN
 , slotToChar
 , charToSlot
+, isEqual
 ) where
 
 import Data.Ord               (comparing)
@@ -196,7 +197,7 @@ completeSort li = sortBy (flip $ comparing DL.length) li
 
 -- Updates the stones in the world
 updateStones :: World -> World
-updateStones w = checkFree $ updateGroups $ updateStonePos w
+updateStones w = updateGroups $ checkFree $ updateStonePos w
 
 ------------------ Utility functions -----------------------------
 
@@ -212,6 +213,12 @@ isBlack _ = False
 isEmpty :: Slot -> Bool
 isEmpty Empty = True
 isEmpty _ = False
+
+isEqual :: Slot -> Slot -> Bool
+isEqual Empty Empty = True
+isEqual White White = True
+isEqual Black Black = True
+isEqual _ _ = False
 
 -- Replaces an element in a list
 replace :: Int -> a -> [a] -> [a]
