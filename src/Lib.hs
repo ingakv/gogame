@@ -183,11 +183,9 @@ getPlacement x y
 pressWorld :: World -> World
 pressWorld w = w3
   where
-    w1 = updateStonePos s s w { board = newMap, curColor = newColor , whiteFree = [] , blackFree = [] } [] []
-    w2 = checkFree w1 0 0
-    w3 = updateGroups 0 0 w2 [] []
-
-    s = boardSize-1
+    w1 = updateStonePos w { board = newMap, curColor = newColor , whiteFree = [] , blackFree = [] }
+    w2 = checkFree w1
+    w3 = updateGroups w2
 
     -- Get the slot currently hovered by the mouse
     inters = intersect' w
@@ -211,22 +209,25 @@ pressWorld w = w3
 
 
 -- Updates the positions of the stones
-updateStonePos :: Int -> Int -> World -> [(Int, Int)] -> [(Int, Int)] -> World
-updateStonePos x y w wli bli = do
-  if x > 0
+updateStonePos :: World -> World
+updateStonePos w = helperUpdateStonePos (boardSize - 1) (boardSize - 1) w [] []
+
+helperUpdateStonePos :: Int -> Int -> World -> [(Int, Int)] -> [(Int, Int)] -> World
+helperUpdateStonePos x y w wli bli = do
+  if x >= 0
     then do
         -- Inserts all the white stones into a list
         if isWhite (((board w) !! x) !! y)
-        then do updateStonePos (x-1) y w (insertAt (x,y) 0 $ wli) bli
+        then do helperUpdateStonePos (x-1) y w (insertAt (x,y) 0 $ wli) bli
 
         else
           -- Repeats for all of the black stones
           if isBlack (((board w) !! x) !! y)
-          then do updateStonePos (x-1) y w wli (insertAt (x,y) 0 $ bli)
-          else updateStonePos (x-1) y w wli bli
+          then do helperUpdateStonePos (x-1) y w wli (insertAt (x,y) 0 $ bli)
+          else helperUpdateStonePos (x-1) y w wli bli
   else
     if y > 0
-    then do updateStonePos (boardSize-1) (y-1) w wli bli
+    then do helperUpdateStonePos (boardSize-1) (y-1) w wli bli
     else w { whiteStonePos = wli, blackStonePos = bli }
 
 

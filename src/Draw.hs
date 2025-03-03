@@ -91,7 +91,7 @@ drawWorld r t w = do
   drawLines r 0
 
   -- Draws the stones currently on the board
-  checkBoard r [t!!2,t!!3] w 0 0
+  helperCheckBoard r [t!!2,t!!3] w
 
   -- Text
   drawUI r w
@@ -212,6 +212,9 @@ drawVerLines r n = do
 
 
 -- Check if a slot is empty, and draw a stone in that spot if it isn't
+helperCheckBoard :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> IO ()
+helperCheckBoard r tx w = checkBoard r tx w 0 0
+
 checkBoard :: SDL.Renderer -> [(SDL.Texture, SDL.TextureInfo)] -> World -> Int -> Int -> IO ()
 checkBoard r tx w x y = do
 

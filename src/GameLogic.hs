@@ -25,8 +25,11 @@ boardSize = 19
 
 
 -- Checks if a slot adjacent to a given slot is empty, and inserts it in the array if it is
-checkFree :: World -> Int -> Int -> World
-checkFree w x y = do
+checkFree :: World -> World
+checkFree w = helperCheckFree w 0 0
+
+helperCheckFree :: World -> Int -> Int -> World
+helperCheckFree w x y = do
   -- All slots / intersections on the board
   let b = [(u,v) | u <- [0..(boardSize-1)], v <- [0..(boardSize-1)]]
 
@@ -46,7 +49,7 @@ checkFree w x y = do
 
     -- Update the free slots and world state
     let new = union freeGr (whiteFree w)
-    checkFree newWorld{ whiteStonePos = newPos , whiteFree = new } (x+1) y
+    helperCheckFree newWorld{ whiteStonePos = newPos , whiteFree = new } (x+1) y
 
 
     -- Repeat for if the slot is occupied by a black stone
@@ -61,7 +64,7 @@ checkFree w x y = do
 
       let new = union freeGr (blackFree w)
 
-      checkFree newWorld{ blackStonePos = newPos , blackFree = new } x (y+1)
+      helperCheckFree newWorld{ blackStonePos = newPos , blackFree = new } x (y+1)
 
     else w
 
@@ -134,8 +137,11 @@ findGroups m mPos = do
    if DL.length nbors > 0 then insert m nbors else [m]
 
 -- Updates groups of stones on the board
-updateGroups :: Int -> Int -> World -> [[(Int, Int)]] -> [[(Int, Int)]] -> World
-updateGroups x y w wli bli = do
+updateGroups :: World -> World
+updateGroups w = helperUpdateGroups 0 0 w [] []
+
+helperUpdateGroups :: Int -> Int -> World -> [[(Int, Int)]] -> [[(Int, Int)]] -> World
+helperUpdateGroups x y w wli bli = do
   -- x is the amount of white stones currently on the board, y is the amount of black stones
   if x < DL.length (whiteStonePos w)
   then do
@@ -146,7 +152,7 @@ updateGroups x y w wli bli = do
     let new = fixList $ insert group wli
 
     -- Loops through each white stone
-    updateGroups (x+1) y w new bli
+    helperUpdateGroups (x+1) y w new bli
 
   -- Repeat for the black stones
   else
@@ -154,7 +160,7 @@ updateGroups x y w wli bli = do
     then do
       let group = findGroups ((blackStonePos w) !! y) (blackStonePos w)
       let new = fixList $ insert group bli
-      updateGroups x (y+1) w wli new
+      helperUpdateGroups x (y+1) w wli new
 
     -- When all stones on the board have been checked, return these two world variables, and remove duplicates
     else w { whiteGroups = (nub wli), blackGroups = (nub bli) }
