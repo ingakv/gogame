@@ -1,14 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module GameLogic (
-  updateGroups
+  updateStones
 , boardSize
 , isWhite
 , isBlack
 , isEmpty
 , replace
 , replaceBoard
-, checkFree
 , insertAt
 , fromJust
 , insertEveryN
@@ -22,6 +21,30 @@ import DataTypes
 -- Define the size of the board
 boardSize :: Int
 boardSize = 19
+
+
+-- Updates the positions of the stones
+updateStonePos :: World -> World
+updateStonePos w = helperUpdateStonePos (boardSize - 1) (boardSize - 1) w [] []
+
+helperUpdateStonePos :: Int -> Int -> World -> [(Int, Int)] -> [(Int, Int)] -> World
+helperUpdateStonePos x y w wli bli = do
+  if x >= 0
+    then do
+        -- Inserts all the white stones into a list
+        if isWhite (((board w) !! x) !! y)
+        then do helperUpdateStonePos (x-1) y w (insertAt (x,y) 0 $ wli) bli
+
+        else
+          -- Repeats for all of the black stones
+          if isBlack (((board w) !! x) !! y)
+          then do helperUpdateStonePos (x-1) y w wli (insertAt (x,y) 0 $ bli)
+          else helperUpdateStonePos (x-1) y w wli bli
+  else
+    if y > 0
+    then do helperUpdateStonePos (boardSize-1) (y-1) w wli bli
+    else w { whiteStonePos = wli, blackStonePos = bli }
+
 
 
 -- Checks if a slot adjacent to a given slot is empty, and inserts it in the array if it is
@@ -168,6 +191,10 @@ helperUpdateGroups x y w wli bli = do
 -- Sorts sublists by size in descending order
 completeSort :: [[a]] -> [[a]]
 completeSort li = sortBy (flip $ comparing DL.length) li
+
+-- Updates the stones in the world
+updateStones :: World -> World
+updateStones w = checkFree $ updateGroups $ updateStonePos w
 
 ------------------ Utility functions -----------------------------
 

@@ -128,11 +128,19 @@ quitWorld w = w { exiting = True }
 
 -- Skip the current player's turn
 skipTurn :: World -> World
-skipTurn w = w { curColor = switchColor w }
+skipTurn w = updateStones w { curColor = switchColor w }
 
 -- Reset the board to its initial state
 clearBoard :: World -> World
-clearBoard w = w { board = initBoard boardSize boardSize [] }
+clearBoard w = w
+  { board = initBoard boardSize boardSize []
+  , whiteStonePos = []
+  , blackStonePos = []
+  , whiteGroups = []
+  , blackGroups = []
+  , whiteFree = []
+  , blackFree = []
+  }
 
 -- Apply a given Intent to the World
 applyIntent :: Intent -> World -> World
@@ -181,11 +189,9 @@ getPlacement x y
 
 -- Handle a mouse button press and update the world accordingly
 pressWorld :: World -> World
-pressWorld w = w3
+pressWorld w = newWorld
   where
-    w1 = updateStonePos w { board = newMap, curColor = newColor , whiteFree = [] , blackFree = [] }
-    w2 = checkFree w1
-    w3 = updateGroups w2
+    newWorld = updateStones w { board = newMap, curColor = newColor }
 
     -- Get the slot currently hovered by the mouse
     inters = intersect' w
@@ -207,27 +213,5 @@ pressWorld w = w3
 
       else (board w, curColor w)
 
-
--- Updates the positions of the stones
-updateStonePos :: World -> World
-updateStonePos w = helperUpdateStonePos (boardSize - 1) (boardSize - 1) w [] []
-
-helperUpdateStonePos :: Int -> Int -> World -> [(Int, Int)] -> [(Int, Int)] -> World
-helperUpdateStonePos x y w wli bli = do
-  if x >= 0
-    then do
-        -- Inserts all the white stones into a list
-        if isWhite (((board w) !! x) !! y)
-        then do helperUpdateStonePos (x-1) y w (insertAt (x,y) 0 $ wli) bli
-
-        else
-          -- Repeats for all of the black stones
-          if isBlack (((board w) !! x) !! y)
-          then do helperUpdateStonePos (x-1) y w wli (insertAt (x,y) 0 $ bli)
-          else helperUpdateStonePos (x-1) y w wli bli
-  else
-    if y > 0
-    then do helperUpdateStonePos (boardSize-1) (y-1) w wli bli
-    else w { whiteStonePos = wli, blackStonePos = bli }
 
 
