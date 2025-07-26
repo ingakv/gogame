@@ -1,10 +1,10 @@
 name:                gogame
 version:             0.1.0.0
-github:              "marni/gogame"
+github:              "ingakv/gogame"
 license:             BSD3
-author:              "Mariusz Nowostawski"
-maintainer:          "mariusz.nowostawski@ntnu.no"
-copyright:           "2023 (C) Nowostawski"
+author:              "Inga Kvam"
+maintainer:          "inga.kvam0605@gmail.com"
+copyright:           "2025 (C) Kvam"
 
 extra-source-files:
 - README.md
@@ -16,7 +16,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/marni/gogame#readme>
+description:         Please see the README on GitHub at <https://github.com/ingakv/gogame#readme>
 
 dependencies:
 - base >= 4.7 && < 5

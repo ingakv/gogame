@@ -76,22 +76,13 @@ allStonePos x y li = do
 
 -- Initialize the game world with default values
 initialWorld :: [(SDL.Texture, SDL.TextureInfo)] -> Font -> [[Slot]] -> World
-initialWorld tx f b = World
+initialWorld tx f b = (initialBoard World {})
   { exiting = False               -- Whether the game is exiting
   , mouseCoords = (0,0)           -- Current mouse coordinates
   , textures = tx                 -- List of textures
   , font = f                      -- Font used for rendering
   , board = b                     -- Initial board setup
-  , prevBoard1 = []
-  , prevBoard2 = []
-  , curColor = Black              -- Current player color
   , allSlotPos = allStonePos (boardSize-1) (boardSize-1) [] -- Precomputed slot positions
-  , whiteStonePos = []            -- Positions of white stones
-  , blackStonePos = []            -- Positions of black stones
-  , whiteGroups = []              -- Groupings of white stones
-  , blackGroups = []              -- Groupings of black stones
-  , whiteFree = []                -- Free positions around white stones
-  , blackFree = []                -- Free positions around black stones
   }
 
 -- Update the world based on a list of SDL events
@@ -146,17 +137,18 @@ skipTurn :: World -> World
 skipTurn w = updateStones w { curColor = switchColor w }
 
 -- Reset the board to its initial state
-clearBoard :: World -> World
-clearBoard w = w
-  { board = initBoard
+initialBoard :: World -> World
+initialBoard w = w
+  { board = initBoard             -- Initial board setup
   , prevBoard1 = initBoard
   , prevBoard2 = initBoard
-  , whiteStonePos = []
-  , blackStonePos = []
-  , whiteGroups = []
-  , blackGroups = []
-  , whiteFree = []
-  , blackFree = []
+  , curColor = Black              -- Current player color
+  , whiteStonePos = []            -- Positions of white stones
+  , blackStonePos = []            -- Positions of black stones
+  , whiteGroups = []              -- Groupings of white stones
+  , blackGroups = []              -- Groupings of black stones
+  , whiteFree = []                -- Free positions around white stones
+  , blackFree = []                -- Free positions around black stones
   }
 
 -- Apply a given Intent to the World
@@ -166,7 +158,7 @@ applyIntent Press       = pressWorld
 applyIntent (MouseMoved coords)  = hoverWorld coords
 applyIntent Quit        = quitWorld
 applyIntent Skip        = skipTurn
-applyIntent Clear       = clearBoard
+applyIntent Clear       = initialBoard
 
 -- Find the slot under the mouse cursor (if any)
 intersect' :: World -> (Int,Int)
@@ -204,11 +196,23 @@ getPlacement x y
   | y < boardSize = (x,y)
   | otherwise = getPlacement (x+1) (y-boardSize)
 
+-- Check if the board is new and update it accordingly
+checkIfBoardIsNew :: World -> Bool -> World
+checkIfBoardIsNew newWorld isNew
+  | isNew = newWorld
+  | otherwise = newWorld { board = prevBoard1 newWorld }
+
+
 -- Handle a mouse button press and update the world accordingly
 pressWorld :: World -> World
-pressWorld w = newWorld
+pressWorld w = checkIfBoardIsNew newWorld isNew
   where
-    newWorld = updateStones w { board = newBoard, curColor = newColor, prevBoard1 = oldBoard1, prevBoard2 = oldBoard2 }
+    newWorld = updateStones w {
+                   board = newBoard,
+                   curColor = newColor,
+                   prevBoard1 = oldBoard1,
+                   prevBoard2 = oldBoard2
+               }
 
     -- Get the slot currently hovered by the mouse
     inters = intersect' w
@@ -224,8 +228,8 @@ pressWorld w = newWorld
 
         let tempNewBoard = replaceBoard w index (curColor w)
 
-        -- Checks if the slot is already occupied, and if it matches any of the previous boards
-        if isEmpty ((board w !! snd index) !! fst index) && tempNewBoard /= prevBoard1 w && tempNewBoard /= prevBoard2 w
+        -- Checks if the slot is empty
+        if (isEmpty ((board w !! snd index) !! fst index))
         then do
           -- Replace the slot with the new one and switch the active color
           (tempNewBoard, switchColor w, board w, prevBoard1 w)
@@ -234,6 +238,8 @@ pressWorld w = newWorld
 
       else prev
 
+    -- Checks if the resulting board is not identical to either of the previous two board positions
+    isNew = (newBoard /= prevBoard1 w) && (newBoard /= prevBoard2 w)
 
 
 loadFromFile :: Handle -> IO [[Slot]]

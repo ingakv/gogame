@@ -15,9 +15,7 @@ main = C.withSDL $ C.withSDLImage $ do
    -- Opens the sgf file and reads its contents
     withFile saveFilePath ReadMode $ \handle -> do
         board <- loadFromFile handle
-        C.withWindow "Assignment 1 - Go" windowSize $ mainApp $ board
-
-
+        C.withWindow "Go-Game" windowSize $ mainApp $ board
 
     -- Opens the temp sgf file and reads its contents
     handle <- openFile tempFilePath ReadMode
