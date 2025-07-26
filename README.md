@@ -96,11 +96,8 @@ The test [succeeded](test/gogame-0.1.0.0-gogame-test.log)
 * Quit the application when pressing 'q' or the ESC button
 * Clear the board by pressing 'c'
 * Can load board states from an SGF file, however, the format of this file is not up to standard, and does instead only consist of an array of 'E's, 'W's and 'B's, which stands for Empty, White and Black
+* Ko is implemented, which ensures that an infinite loop of capture and recapture is not possible
 
-**Not implemented features**
 
-* Ko is not implemented and an infinite loop of capture and recapture is possible
-  * I chose to not implement KO as I feel like it would be one of the more advanced features. The way I would have done it is by storing two copies of the board before any change was made to it. So board_1 would be how the board was one turn ago, and board_2 would be how it was two rounds ago. When a stone was attempted to be placed. I would then check if the board was back to how it looked in one of the two previous rounds. If it was, the stone would not be able to be placed
-* Reading from SGF file is not done the "correct" way
-  * It should be able to read an SGF file quickly and check whether it exists.
-* Should also have at least 50% test coverage.
+
+Should also have at least 50% test coverage.
